@@ -115,6 +115,9 @@ typedef struct pending_consensus_t {
   char *body;
   /** The parsed in-progress consensus document. */
   networkstatus_t *consensus;
+  /** Have we reached the critical number of sigs on this consensus, and
+   * exported it for the consensus transparency module? */
+  bool have_exported_for_transparency;
 } pending_consensus_t;
 
 /* DOCDOC dirvote_add_signatures_to_all_pending_consensuses */
@@ -2374,6 +2377,21 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                                          T, weight_scale);
   }
 
+  /* Write the unsigned proposed consensus text to disk, for dir auth
+   * debugging purposes, and also to put a sig-less consensus file in
+   * place for (with luck) later export to the consensus transparency
+   * module. */
+  {
+    char *unsigned_consensus = smartlist_join_strings(chunks, "", 0, NULL);
+    char *filename;
+    tor_asprintf(&filename, "my-consensus-%s", flavor_name);
+    char *fpath = get_datadir_fname(filename);
+    write_str_to_file(fpath, unsigned_consensus, 0);
+    tor_free(filename);
+    tor_free(fpath);
+    tor_free(unsigned_consensus);
+  }
+
   /* Add a signature. */
   {
     char digest[DIGEST256_LEN];
@@ -3486,16 +3504,6 @@ dirvote_compute_consensuses(void)
       pending[flav].consensus = consensus;
       n_generated++;
 
-      /* Write it out to disk too, for dir auth debugging purposes */
-      {
-        char *filename;
-        tor_asprintf(&filename, "my-consensus-%s", flavor_name);
-        char *fpath = get_datadir_fname(filename);
-        write_str_to_file(fpath, consensus_body, 0);
-        tor_free(filename);
-        tor_free(fpath);
-      }
-
       consensus_body = NULL;
       consensus = NULL;
     }
@@ -3561,9 +3569,36 @@ dirvote_compute_consensuses(void)
   return -1;
 }
 
-/** Helper: we just got the <b>detached_signatures_body</b> sent to us as
- * signatures on the currently pending consensus.  Add them to <b>pc</b>
- * as appropriate.  Return the number of signatures added. (?) */
+/** We just got enough sigs on the pending <b>flavor_name</b>-flavor
+ * consensus that it is time to export it to the consensus transparency
+ * module. We do this by writing a "consensus-transparency-%s" file which
+ * the module will detect and act on.
+ *
+ * The file needs to be just the bare consensus, with no signatures, so we
+ * are registering a hash that everybody can agree on. */
+static void
+export_consensus_for_transparency(const char *flavor_name)
+{
+  char *filename;
+  tor_asprintf(&filename, "my-consensus-%s", flavor_name);
+  char *fpath_from = get_datadir_fname(filename);
+  tor_free(filename);
+  tor_asprintf(&filename, "consensus-transparency-%s", flavor_name);
+  char *fpath_to = get_datadir_fname(filename);
+  tor_free(filename);
+
+  replace_file(fpath_from, fpath_to);
+
+  log_notice(LD_DIR, "Exported consensus transparency file %s.",
+             fpath_to);
+
+  tor_free(fpath_from);
+  tor_free(fpath_to);
+}
+
+/** Helper: we just received <b>sigs</b> as
+ * signatures on the currently pending consensus. Add them to <b>pc</b>
+ * as appropriate. Return the number of signatures added, or -1 if error. */
 static int
 dirvote_add_signatures_to_pending_consensus(
                        pending_consensus_t *pc,
@@ -3627,6 +3662,16 @@ dirvote_add_signatures_to_pending_consensus(
     }
     *msg_out = "Signatures added";
     tor_free(new_signatures);
+
+    /* Check if we now have enough sigs that we are confident this
+     * will be our consensus. */
+    if (!pc->have_exported_for_transparency &&
+        networkstatus_check_consensus_signature(pc->consensus, -1) >= 0) {
+      /* Yes! Send it to the consensus transparency module. */
+      export_consensus_for_transparency(flavor_name);
+      pc->have_exported_for_transparency = 1;
+    }
+
   } else if (r == 0) {
     *msg_out = "Signatures ignored";
   } else {
