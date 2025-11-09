@@ -1072,6 +1072,16 @@ dnl and later.  We want to migrate away from them, but that will be a lot of
 dnl work. (See ticket tor#40166.)  For now, we disable the deprecation
 dnl warnings.
 
+dnl --- Check for OpenSSL engine header ---
+AC_CHECK_HEADERS([openssl/engine.h], [],
+  [AC_MSG_ERROR([Missing required header openssl/engine.h.
+
+On Debian/Ubuntu install:   libssl-dev
+On Fedora/RHEL install:     openssl-devel-engine
+
+Then re-run configure.])])
+
+
 AC_MSG_CHECKING([for OpenSSL implementation])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <openssl/opensslv.h>
