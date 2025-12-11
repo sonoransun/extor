@@ -1,0 +1,5 @@
+  o Major bugfixes (security):
+    - Avoid an out-of-bounds read error that could occur with
+      V1-formatted cells on Tor 0.4.9.3-alpha or later.
+      Fixes bug 41180; bugfix on 0.4.9.3-alpha.
+      This is tracked as TROVE-2025-016.
