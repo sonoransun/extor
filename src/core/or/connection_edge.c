@@ -2205,7 +2205,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       /* Whoops; this one is stale.  It must have gotten added earlier?
        * (Probably this is not possible, since AllowDotExit no longer
        * exists.) */
-      log_warn(LD_APP,"Stale automapped address for '%s.exit'. Refusing.",
+      log_warn(LD_APP,"Stale automapped address for '%s.$fp.exit'. Refusing.",
                safe_str_client(socks->address));
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                   escaped(socks->address));
@@ -2219,7 +2219,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     if (exit_source == ADDRMAPSRC_DNS || exit_source == ADDRMAPSRC_NONE) {
       /* It shouldn't be possible to get a .exit address from any of these
        * sources. */
-      log_warn(LD_BUG,"Address '%s.exit', with impossible source for the "
+      log_warn(LD_BUG,"Address '%s.$fp.exit', with impossible source for the "
                ".exit part. Refusing.",
                safe_str_client(socks->address));
       control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
@@ -2272,7 +2272,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* Now make sure that the chosen exit exists... */
     if (!node) {
       log_warn(LD_APP,
-               "Unrecognized relay in exit address '%s.exit'. Refusing.",
+               "Unrecognized relay in exit address '%s.$fp.exit'. Refusing.",
                safe_str_client(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
@@ -2280,7 +2280,7 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
     /* ...and make sure that it isn't excluded. */
     if (routerset_contains_node(excludeset, node)) {
       log_warn(LD_APP,
-               "Excluded relay in exit address '%s.exit'. Refusing.",
+               "Excluded relay in exit address '%s.$fp.exit'. Refusing.",
                safe_str_client(socks->address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
