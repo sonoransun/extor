@@ -3264,9 +3264,8 @@ set_descriptor_revision_counter(hs_service_descriptor_t *hs_desc, time_t now,
 }
 
 /** Encode and sign the service descriptor desc and upload it to the
- * responsible hidden service directories. If for_next_period is true, the set
- * of directories are selected using the next hsdir_index. This does nothing
- * if PublishHidServDescriptors is false. */
+ * responsible hidden service directories.
+ * This does nothing if PublishHidServDescriptors is false. */
 STATIC void
 upload_descriptor_to_all(const hs_service_t *service,
                          hs_service_descriptor_t *desc)

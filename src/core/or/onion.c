@@ -401,7 +401,7 @@ check_extended_cell(const extended_cell_t *cell)
 }
 
 /** Parse an EXTENDED or EXTENDED2 cell (according to <b>command</b>) from the
- * <b>payload_length</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
+ * <b>payload_len</b> bytes of <b>payload</b> into <b>cell_out</b>. Return
  * 0 on success, -1 on failure. */
 int
 extended_cell_parse(extended_cell_t *cell_out,
