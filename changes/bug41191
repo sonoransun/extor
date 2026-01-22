@@ -1,0 +1,10 @@
+  o Major bugfixes (directory servers):
+    - Allow old clients to fetch the consensus even if they use version 0
+      of the SENDME protocol. In mid 2025 we changed the required
+      minimum version of the "FlowCtrl" protocol to 1, meaning directory
+      caches hang up on clients that send a version 0 SENDME cell. Since
+      old clients were no longer able to retrieve the consensus, they
+      couldn't learn about this required minimum version -- meaning
+      we've had many many old clients loading down directory servers
+      for the past months. Fixes bug 41191; bugfix on 0.4.1.1-alpha.
+

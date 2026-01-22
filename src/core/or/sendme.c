@@ -184,7 +184,7 @@ cell_version_can_be_handled(uint8_t cell_version)
  * of expected tags for each layer!
  */
 STATIC bool
-sendme_is_valid(const circuit_t *circ,
+sendme_is_valid(circuit_t *circ,
                 const crypt_path_t *layer_hint,
                 const uint8_t *cell_payload,
                 size_t cell_payload_len)
@@ -211,7 +211,15 @@ sendme_is_valid(const circuit_t *circ,
   }
 
   /* Validate that we can handle this cell version. */
-  if (!cell_version_can_be_handled(cell_version)) {
+  if (CIRCUIT_IS_ORCIRC(circ) &&
+      TO_OR_CIRCUIT(circ)->used_legacy_circuit_handshake &&
+      cell_version == 0) {
+    /* exception, allow v0 sendmes on circuits made with CREATE_FAST */
+    log_info(LD_CIRC, "Permitting sendme version 0 on legacy circuit.");
+    /* Record this choice on the circuit, so we can avoid counting
+     * directory fetches on this circuit toward our geoip stats. */
+    TO_OR_CIRCUIT(circ)->used_obsolete_sendme = 1;
+  } else if (!cell_version_can_be_handled(cell_version)) {
     goto invalid;
   }
 
