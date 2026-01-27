@@ -1,0 +1,4 @@
+  o Minor bugfixes (relay):
+    - Downgrade log warn to info as the error condition is possible under normal
+      circumstances. Fixes bug 40951; bugfix on 0.3.5.1-alpha.
+
