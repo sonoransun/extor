@@ -112,7 +112,7 @@ Changes in version 0.4.9.3-alpha - 2025-09-16
       Additionally, create a separate torrc option MaxHSDirCacheBytes
       that defaults to the former 20% of MaxMemInQueues threshold, but
       can be controlled by relay operators under DoS. Also enforce this
-      theshold during HSDir uploads. Fixes bug 41006; bugfix
+      threshold during HSDir uploads. Fixes bug 41006; bugfix
       on 0.4.8.14.
 
   o Minor features (security):
@@ -170,7 +170,7 @@ Changes in version 0.4.9.3-alpha - 2025-09-16
       bug 41037; bugfix on 0.4.8.15.
 
   o Minor bugfixes (bridges, pluggable transport):
-    - Fix a bug causing the initial tor process to hang intead of
+    - Fix a bug causing the initial tor process to hang instead of
       exiting with RunAsDaemon, when pluggable transports are used.
       Fixes bug 41088; bugfix on 0.4.9.1-alpha.
 
@@ -566,7 +566,7 @@ Changes in version 0.4.9.1-alpha - 2024-12-03
       connections. This is controlled by new config option
       ReevaluateExitPolicy, defaulting to 0. Closes ticket 40676.
 
-  o Minor feature (exit relay, DoS resitance):
+  o Minor feature (exit relay, DoS resistance):
     - Implement a token-bucket based rate limiter for stream creation
       and resolve request. It is configured by the DoSStream* family of
       configuration options. Closes ticket 40736.
@@ -826,7 +826,7 @@ Changes in version 0.4.8.9 - 2023-11-09
 Changes in version 0.4.8.8 - 2023-11-03
   We are releasing today a fix for a high security issue, TROVE-2023-004, that
   is affecting relays. Also a few minor bugfixes detailed below. Please upgrade
-  as soon as posssible.
+  as soon as possible.
 
   o Major bugfixes (TROVE-2023-004, relay):
     - Mitigate an issue when Tor compiled with OpenSSL can crash during
@@ -1065,7 +1065,7 @@ Changes in version 0.4.8.2-alpha - 2023-07-12
 
   o Minor bugfixes (conflux):
     - Count leg launch attempts prior to attempting to launch them. This
-      avoids inifinite launch attempts due to internal circuit building
+      avoids infinite launch attempts due to internal circuit building
       failures. Additionally, double-check that we have enough exits in
       our consensus overall, before attempting to launch conflux sets.
       Fixes bug 40811; bugfix on 0.4.8.1-alpha.
@@ -1271,7 +1271,7 @@ Changes in version 0.4.7.13 - 2023-01-12
 
   o Major bugfixes (congestion control):
     - Avoid incrementing the congestion window when the window is not
-      fully in use. Thia prevents overshoot in cases where long periods
+      fully in use. This prevents overshoot in cases where long periods
       of low activity would allow our congestion window to grow, and
       then get followed by a burst, which would cause queue overload.
       Also improve the increment checks for RFC3742. Fixes bug 40732;

@@ -420,7 +420,7 @@ Changes in version 0.4.8.9 - 2023-11-09
 Changes in version 0.4.8.8 - 2023-11-03
   We are releasing today a fix for a high security issue, TROVE-2023-004, that
   is affecting relays. Also a few minor bugfixes detailed below. Please upgrade
-  as soon as posssible.
+  as soon as possible.
 
   o Major bugfixes (TROVE-2023-004, relay):
     - Mitigate an issue when Tor compiled with OpenSSL can crash during
@@ -742,7 +742,7 @@ Changes in version 0.4.8.4 - 2023-08-23
 
   o Minor bugfixes (conflux):
     - Count leg launch attempts prior to attempting to launch them. This
-      avoids inifinite launch attempts due to internal circuit building
+      avoids infinite launch attempts due to internal circuit building
       failures. Additionally, double-check that we have enough exits in
       our consensus overall, before attempting to launch conflux sets.
       Fixes bug 40811; bugfix on 0.4.8.1-alpha.
@@ -823,7 +823,7 @@ Changes in version 0.4.7.13 - 2023-01-12
 
   o Major bugfixes (congestion control):
     - Avoid incrementing the congestion window when the window is not
-      fully in use. Thia prevents overshoot in cases where long periods
+      fully in use. This prevents overshoot in cases where long periods
       of low activity would allow our congestion window to grow, and
       then get followed by a burst, which would cause queue overload.
       Also improve the increment checks for RFC3742. Fixes bug 40732;
