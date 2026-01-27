@@ -1,3 +1,5 @@
   o Minor features (debugging, compression):
     - Log the input and output buffer sizes when we detect a potential
       compression bomb. Diagnostic for ticket 40739.
+    - Do not check for compression bombs for buffers smaller than 5 MB
+      (increased from 64 KB). Fixes ticket 40739; bugfix on 0.2.1.29.
