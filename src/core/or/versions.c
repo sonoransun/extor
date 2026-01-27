@@ -286,7 +286,7 @@ tor_version_parse(const char *s, tor_version_t *out)
     cp += 2;
     out->svn_revision = (int) strtol(cp,&eos,10);
   } else if (!strcmpstart(cp, "(git-")) {
-    char *close_paren = strchr(cp, ')');
+    const char *close_paren = strchr(cp, ')');
     int hexlen;
     char digest[DIGEST_LEN];
     if (! close_paren)
