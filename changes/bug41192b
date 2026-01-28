@@ -1,4 +1,0 @@
-  o Minor features (directory servers):
-    - Track how many times directory servers begin serving networkstatus
-      documents, so we can compare it to the number of times we finish
-      serving them. Motivated by the fixes in ticket 41192.

@@ -1,4 +1,0 @@
-  o Minor bugfixes (DNS, exit):
-    - Clip every returned DNS TTL to 60 (RESOLVED) in order to mitigate an exit
-      DNS cache oracle. Fixes bug 40979; bugfix on 0.3.5.1-alpha.
-

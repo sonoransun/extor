@@ -1,9 +1,0 @@
-  o Major bugfixes (directory servers):
-    - Don't count networkstatus serves until they finish. When we started
-      serving a consensus document but the client didn't receive all of
-      it, we were still counting that as a success in our stats. This
-      mistake, which can be triggered for example by obsolete clients
-      or by DPI-based censorship, led to wildly inflated user counts
-      because we estimate total users in the world based on successful
-      consensus fetches. Fixes bug 41192; bugfix on 0.2.1.1-alpha.
-

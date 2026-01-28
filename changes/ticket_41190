@@ -1,4 +1,0 @@
-  o Code simplification and refactoring:
-    - Simplify SOCKS4a parsing to avoid the (false) appearance of
-      integer underflows, and to make the logic more obvious.
-      Fixes bug 41190; bugfix on 0.3.5.1-alpha.
