@@ -518,8 +518,12 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
 {
   transport_t *t_tmp = NULL;
 
-  log_warn(LD_PT, "Managed proxy at '%s' died in state %s",
-           mp->argv[0], managed_proxy_state_to_string(mp->conf_state));
+  /* Rate limit this log as a regurlarly dying PT would log this once every
+   * second (retry time). Every 5 minutes is likely loud enough to notice. */
+  static ratelim_t log_died_lim = RATELIM_INIT(300);
+  log_fn_ratelim(&log_died_lim, LOG_WARN, LD_PT,
+                 "Managed proxy at '%s' died in state %s", mp->argv[0],
+                 managed_proxy_state_to_string(mp->conf_state));
 
   /* destroy the process handle and terminate the process. */
   if (mp->process) {
