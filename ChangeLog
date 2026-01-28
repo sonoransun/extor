@@ -3,29 +3,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
   features and several bugfixes. Nothing major has been added since the alpha.
   If everything goes well, the next version will be the first stable.
 
-  o Major bugfixes (security):
-    - Avoid an out-of-bounds read error that could occur with
-      V1-formatted cells. Fixes bug 41180; bugfix on 0.4.8.1-alpha. This
-      is tracked as TROVE-2025-016.
-
-  o Major bugfixes (directory servers):
-    - Allow old clients to fetch the consensus even if they use version
-      0 of the SENDME protocol. In mid 2025 we changed the required
-      minimum version of the "FlowCtrl" protocol to 1, meaning directory
-      caches hang up on clients that send a version 0 SENDME cell. Since
-      old clients were no longer able to retrieve the consensus, they
-      couldn't learn about this required minimum version -- meaning
-      we've had many many old clients loading down directory servers for
-      the past months. Fixes bug 41191; bugfix on 0.4.1.1-alpha.
-    - Don't count networkstatus serves until they finish. When we
-      started serving a consensus document but the client didn't receive
-      all of it, we were still counting that as a success in our stats.
-      This mistake, which can be triggered for example by obsolete
-      clients or by DPI-based censorship, led to wildly inflated user
-      counts because we estimate total users in the world based on
-      successful consensus fetches. Fixes bug 41192; bugfix
-      on 0.2.1.1-alpha.
-
   o Minor features (security, reliability):
     - When KeepaliveIsolateSOCKSAuth is keeping a circuit alive, expire
       the circuit based on when it was last in use for any stream, not
@@ -34,28 +11,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
 
   o Minor feature (Exit):
     - Add Monero ports to the ReducedExitPolicy. Closes ticket 41168.
-
-  o Minor feature (testing, CI):
-    - Bump the CI version of chutney to the current version as of
-      2026-01-21 (3338f5c).
-
-  o Minor features (debugging, compression):
-    - Do not check for compression bombs for buffers smaller than 5MB
-      (increased from 64 KB). Fixes ticket 40739; bugfix on 0.2.1.29.
-    - Log the input and output buffer sizes when we detect a potential
-      compression bomb. Diagnostic for ticket 40739.
-
-  o Minor features (directory servers):
-    - Track how many times directory servers begin serving networkstatus
-      documents, so we can compare it to the number of times we finish
-      serving them. Motivated by the fixes in ticket 41192.
-
-  o Minor features (fallbackdir):
-    - Regenerate fallback directories generated on January 28, 2026.
-
-  o Minor features (geoip data):
-    - Update the geoip files to match the IPFire Location Database, as
-      retrieved on 2026/01/28.
 
   o Minor features (HTTPTunnelPort):
     - Implement new HTTPTunnelPort features for interoperability with
@@ -79,10 +34,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
     - Clip every returned DNS TTL to 60 (RESOLVED) in order to mitigate
       an exit DNS cache oracle. Fixes bug 40979; bugfix on 0.3.5.1-alpha.
 
-  o Minor bugfixes (relay):
-    - Downgrade log warn to info as the error condition is possible under
-      normal circumstances. Fixes bug 40951; bugfix on 0.3.5.1-alpha.
-
   o Minor bugfixes (spec conformance):
     - Do not treat "15" as a recognized remote END reason code.
       Formerly, we treated it as synonymous with a local ENTRYPOLICY,
@@ -98,6 +49,60 @@ Changes in version 0.4.9.4-rc - 2026-01-28
     - Fix minor warnings from newer versions of shellcheck and clang.
       Fixes bug 41166; bugfix on 0.4.3.1-alpha and several
       other versions.
+
+
+Changes in version 0.4.8.22 - 2026-01-28
+  This is likely the very last release of the 0.4.8.x series. Three major
+  bugfixes detailed below including two affecting directory servers (basically
+  all relays). We strongly recommend upgrading as soon as possible.
+
+  o Major bugfixes (security):
+    - Avoid an out-of-bounds read error that could occur with
+      V1-formatted EXTEND cells. Fixes bug 41180; bugfix on 0.4.8.1-alpha.
+      This is tracked as TROVE-2025-016.
+
+  o Major bugfixes (directory servers):
+    - Allow old clients to fetch the consensus even if they use version
+      0 of the SENDME protocol. In mid 2025 we changed the required
+      minimum version of the "FlowCtrl" protocol to 1, meaning directory
+      caches hang up on clients that send a version 0 SENDME cell. Since
+      old clients were no longer able to retrieve the consensus, they
+      couldn't learn about this required minimum version -- meaning
+      we've had many many old clients loading down directory servers for
+      the past months. Fixes bug 41191; bugfix on 0.4.1.1-alpha.
+    - Don't count networkstatus serves until they finish. When we
+      started serving a consensus document but the client didn't receive
+      all of it, we were still counting that as a success in our stats.
+      This mistake, which can be triggered for example by obsolete
+      clients or by DPI-based censorship, led to wildly inflated user
+      counts because we estimate total users in the world based on
+      successful consensus fetches. Fixes bug 41192; bugfix
+      on 0.2.1.1-alpha.
+
+  o Minor feature (testing, CI):
+    - Bump the CI version of chutney to the current version as of
+      2026-01-21 (3338f5c).
+
+  o Minor features (debugging, compression):
+    - Do not check for compression bombs for buffers smaller than 5MB
+      (increased from 64 KB). Fixes ticket 40739; bugfix on 0.2.1.29.
+
+  o Minor features (directory servers):
+    - Track how many times directory servers begin serving networkstatus
+      documents, so we can compare it to the number of times we finish
+      serving them. Motivated by the fixes in ticket 41192.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on January 28, 2026.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database, as
+      retrieved on 2026/01/28.
+
+  o Minor bugfixes (relay):
+    - Downgrade "Error relaying cell across rendezvous" log warn to info
+      as the error condition is possible under normal circumstances. Fixes
+      bug 40951; bugfix on 0.3.5.1-alpha.
 
   o Code simplification and refactoring:
     - Simplify SOCKS4a parsing to avoid the (false) appearance of
