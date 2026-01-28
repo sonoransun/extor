@@ -8,15 +8,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
       V1-formatted cells. Fixes bug 41180; bugfix on 0.4.8.1-alpha. This
       is tracked as TROVE-2025-016.
 
-  o Major bugfixes (client, TLS):
-    - Fix some clients not being able to connect to LibreSSL relays.
-      Fixes bug 41134; bugfix on 0.4.8.17
-
-  o Major bugfixes (conflux, exit):
-    - When dequeuing out-of-order conflux cells, the circuit could be
-      close in between two dequeue which could lead to a mishandling of
-      a NULL pointer. Fixes bug 41162; bugfix on 0.4.8.4.
-
   o Major bugfixes (directory servers):
     - Allow old clients to fetch the consensus even if they use version
       0 of the SENDME protocol. In mid 2025 we changed the required
@@ -40,11 +31,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
       the circuit based on when it was last in use for any stream, not
       (as we did before) based on when a stream was last attached to it.
       Closes ticket 41157. Implements a minimal version of Proposal 368.
-
-  o Minor feature (compiler flag):
-    - Add -fcf-protection=full if supported by the compiler.
-      Fixes 41139.
-    - Add -mbranch-protection=standard for arm64.
 
   o Minor feature (Exit):
     - Add Monero ports to the ReducedExitPolicy. Closes ticket 41168.
@@ -89,25 +75,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
       used by glob() in glibc 2.36+ when processing %include directives
       with directory patterns.
 
-  o Minor bugfix (process):
-    - Avoid closing all possible FDs when spawning a process (PT). On
-      some systems, this could lead to 3+ minutes hang. Fixes bug 40990;
-      bugfix on 0.3.5.1-alpha.
-
-  o Minor bugfixes (bridges, pluggable transport):
-    - Fix a bug causing the initial tor process to hang intead of
-      exiting with RunAsDaemon, when pluggable transports are used.
-      Fixes bug 41088; bugfix on 0.4.8.1-alpha.
-
-  o Minor bugfixes (conflux fragile asserts):
-    - Fix the root cause of some conflux fragile asserts when a control
-      port listener is attached. Fixes bug 41037; bugfix on 0.4.8.16.
-
-  o Minor bugfixes (conflux, relay):
-    - Fix a series of conflux edge cases about sequence number
-      arithmetic and OOM handler kicking in under heavy memory pressure.
-      Fixes bug 41155; bugfix on 0.4.8.4.
-
   o Minor bugfixes (DNS, exit):
     - Clip every returned DNS TTL to 60 (RESOLVED) in order to mitigate
       an exit DNS cache oracle. Fixes bug 40979; bugfix on 0.3.5.1-alpha.
@@ -121,14 +88,6 @@ Changes in version 0.4.9.4-rc - 2026-01-28
       Formerly, we treated it as synonymous with a local ENTRYPOLICY,
       which isn't a valid remote code at all. Fixes bug 41171; bugfix
       on 0.2.0.8-alpha.
-
-  o Minor bugfixes (stream flow control performance):
-    - Use a 5 ms grace period to allow an edge connection to flush its
-      stream data to the socket before sending an XOFF. This
-      significantly reduces the number of XON/XOFF messages sent when
-      (1) the application is reading stream data at a fast rate, and (2)
-      when conflux is enabled. Fixes part of bug 41130; bugfix
-      on 0.4.7.2-alpha
 
   o Minor bugfixes (tooling):
     - Fix a false positive valgrind related to inspecting a bitfield
