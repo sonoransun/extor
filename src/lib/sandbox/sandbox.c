@@ -23,7 +23,7 @@
  *
  * 28/06/2017: This value was increased from 16 MB to 20 MB after we introduced
  * LZMA support in Tor (0.3.1.1-alpha). We limit our LZMA coder to 16 MB, but
- * liblzma have a small overhead that we need to compensate for to avoid being
+ * liblzma has a small overhead that we need to compensate for to avoid being
  * killed by the sandbox.
  */
 #define MALLOC_MP_LIM (20*1024*1024)
@@ -332,7 +332,7 @@ static int filter_nopar_gen[] = {
 };
 
 /* opendir is not a syscall but it will use either open or openat. We do not
- * want the decision to allow open/openat to be the callers reponsability, so
+ * want the decision to allow open/openat to be the callers responsibility, so
  * we create a phony syscall number for opendir and sb_opendir will choose the
  * correct syscall. */
 #define PHONY_OPENDIR_SYSCALL -2
