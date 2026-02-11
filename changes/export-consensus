@@ -1,0 +1,4 @@
+  o Minor features (directory authority):
+    - Export unsigned consensus documents once we have seen a threshold
+      of signatures, as a step toward the consensus transparency
+      experiment.

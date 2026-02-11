@@ -1064,6 +1064,13 @@ sandbox_init_filter(void)
   if (authdir_mode(options)) {
     RENAME_SUFFIX("my-consensus-microdesc", ".tmp");
     RENAME_SUFFIX("my-consensus-ns", ".tmp");
+
+    sandbox_cfg_allow_rename(&cfg,
+      get_datadir_fname("my-consensus-microdesc"),
+      get_datadir_fname("consensus-transparency-microdesc"));
+    sandbox_cfg_allow_rename(&cfg,
+      get_datadir_fname("my-consensus-ns"),
+      get_datadir_fname("consensus-transparency-ns"));
   }
 
 #define STAT_DATADIR(name)                      \
