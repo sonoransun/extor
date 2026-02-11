@@ -877,6 +877,16 @@ create_family_id_key(const char *fname, ed25519_public_key_t *pk_out)
 {
   int r = -1;
   ed25519_keypair_t *kp = tor_malloc_zero(sizeof(ed25519_keypair_t));
+
+  /* Refuse to overwrite an existing family key */
+  if (file_status(fname) == FN_FILE) {
+    log_warn(LD_GENERAL,
+             "Family key file '%s' already exists. "
+             "Refusing to overwrite existing family key.",
+             fname);
+    goto done;
+  }
+
   if (ed25519_keypair_generate(kp, 1) < 0) {
     log_warn(LD_BUG, "Can't generate ed25519 key!");
     goto done;
