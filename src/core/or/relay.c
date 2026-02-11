@@ -2889,8 +2889,9 @@ cell_queues_check_size(void)
         alloc -= removed;
         static ratelim_t hs_cache_oom_ratelim = RATELIM_INIT(600);
         log_fn_ratelim(&hs_cache_oom_ratelim, LOG_NOTICE, LD_REND,
-               "HSDir cache exceeded limit (%zu > %"PRIu64" bytes). "
-               "Pruned %zu bytes during cell_queues_check_size.",
+               "HSDir cache exceeded limit "
+               "(%"TOR_PRIuSZ " > %"PRIu64 " bytes). "
+               "Pruned %"TOR_PRIuSZ " bytes during cell_queues_check_size.",
                hs_cache_total, hs_cache_get_max_bytes(), removed);
       }
       if (geoip_client_cache_total > get_options()->MaxMemInQueues / 5) {
