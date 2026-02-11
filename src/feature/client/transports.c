@@ -97,6 +97,7 @@
 #include "app/config/config.h"
 #include "core/mainloop/connection.h"
 #include "core/or/circuitbuild.h"
+#include "feature/hibernate/hibernate.h"
 #include "feature/client/transports.h"
 #include "feature/relay/router.h"
 #include "feature/relay/relay_find_addr.h"
@@ -530,6 +531,10 @@ proxy_prepare_for_restart(managed_proxy_t *mp)
   /* destroy the process handle and terminate the process. */
   if (mp->process) {
     process_set_data(mp->process, NULL);
+    if (we_are_shutting_down())
+      log_notice(LD_CONFIG, "Managed proxy \"%s\" having PID %" PRIu64 " "
+                            "is being terminated...", mp->argv[0],
+                            process_get_pid(mp->process));
     process_terminate(mp->process);
   }
 
@@ -2144,9 +2149,13 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
   managed_proxy_t *mp = process_get_data(process);
   const char *name = mp ? mp->argv[0] : "N/A";
 
-  log_warn(LD_PT,
-          "Managed proxy \"%s\" process terminated with status code %" PRIu64,
-          name, exit_code);
+  if (!we_are_shutting_down())
+    log_warn(LD_PT, "Managed proxy \"%s\" having PID %" PRIu64 " "
+                    "terminated with status code %" PRIu64,
+                    name, process_get_pid(process), exit_code);
+  else
+    log_notice(LD_PT, "Managed proxy \"%s\" having PID %" PRIu64 " "
+                      "has exited.", name, process_get_pid(process));
 
   if (mp) {
     /* We remove this process_t from the mp. */
@@ -2156,8 +2165,10 @@ managed_proxy_exit_callback(process_t *process, process_exit_code_t exit_code)
     /* Prepare the proxy for restart. */
     proxy_prepare_for_restart(mp);
 
-    /* We have proxies we want to restart? */
-    pt_configure_remaining_proxies();
+    if (!we_are_shutting_down()) {
+      /* We have proxies we want to restart? */
+      pt_configure_remaining_proxies();
+    }
   }
 
   /* Returning true here means that the process subsystem will take care of
