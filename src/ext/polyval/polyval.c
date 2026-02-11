@@ -198,6 +198,7 @@ pv_xor_y_ctmul64(polyval_t *pv, u128 val)
 #if defined(PV_USE_CTMUL)
 #include "ext/polyval/ctmul.c"
 
+DISABLE_GCC_WARNING("-Waggregate-return")
 static inline u128
 u128_from_bytes_ctmul(const uint8_t *bytes)
 {
@@ -208,6 +209,8 @@ u128_from_bytes_ctmul(const uint8_t *bytes)
   }
   return r;
 }
+ENABLE_GCC_WARNING("-Waggregate-return")
+
 static inline void
 u128_to_bytes_ctmul(u128 val, uint8_t *bytes_out)
 {
@@ -247,6 +250,7 @@ static inline void expand_key_none(const polyval_t *inp,
  * caused warnings with some comparisons. */
 #define BLOCK_STRIDE_NONE  0xffff
 
+DISABLE_GCC_WARNING("-Waggregate-return")
 #define PV_DECLARE(prefix,                                              \
                    st,                                                  \
                    u128_from_bytes,                                     \
@@ -315,6 +319,7 @@ static inline void expand_key_none(const polyval_t *inp,
   {                                                                     \
     memset(&pv->y, 0, sizeof(u128));                                    \
   }
+ENABLE_GCC_WARNING("-Waggregate-return")
 
 #ifdef PV_USE_PCLMUL_DETECT
 /* We use a boolean to distinguish whether to use the PCLMUL instructions,
@@ -426,6 +431,7 @@ PV_DECLARE(, ,
            add_multiple_none)
 
 #elif defined(PV_USE_CTMUL)
+DISABLE_GCC_WARNING("-Waggregate-return")
 PV_DECLARE(, , u128_from_bytes_ctmul,
            u128_to_bytes_ctmul,
            pv_xor_y_ctmul,
@@ -434,6 +440,7 @@ PV_DECLARE(, , u128_from_bytes_ctmul,
            struct expanded_key_none,
            expand_key_none,
            add_multiple_none)
+ENABLE_GCC_WARNING("-Waggregate-return")
 #endif
 
 #ifdef PV_USE_PCLMUL_DETECT
