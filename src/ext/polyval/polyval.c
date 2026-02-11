@@ -36,6 +36,7 @@
  */
 
 #include "ext/polyval/polyval.h"
+#include "lib/cc/compat_compiler.h"
 
 #include <string.h>
 
@@ -139,6 +140,7 @@ bswap32(uint64_t v)
 #ifdef PV_USE_PCLMUL
 #include "ext/polyval/pclmul.c"
 
+DISABLE_GCC_WARNING("-Waggregate-return")
 static inline u128
 u128_from_bytes_pclmul(const uint8_t *bytes)
 {
@@ -146,6 +148,8 @@ u128_from_bytes_pclmul(const uint8_t *bytes)
   PCLMUL_MEMBER(r) = _mm_loadu_si128((const __m128i*)bytes);
   return r;
 }
+ENABLE_GCC_WARNING("-Waggregate-return")
+
 static inline void
 u128_to_bytes_pclmul(u128 val, uint8_t *bytes_out)
 {
@@ -162,6 +166,7 @@ pv_xor_y_pclmul(polyval_t *pv, u128 v)
 #if defined(PV_USE_CTMUL64)
 #include "ext/polyval/ctmul64.c"
 
+DISABLE_GCC_WARNING("-Waggregate-return")
 static inline u128
 u128_from_bytes_ctmul64(const uint8_t *bytes)
 {
@@ -172,6 +177,8 @@ u128_from_bytes_ctmul64(const uint8_t *bytes)
   CTMUL64_MEMBER(r).hi = convert_byte_order64(CTMUL64_MEMBER(r).hi);
   return r;
 }
+ENABLE_GCC_WARNING("-Waggregate-return")
+
 static inline void
 u128_to_bytes_ctmul64(u128 val, uint8_t *bytes_out)
 {
@@ -318,6 +325,7 @@ static bool use_pclmul = false;
 
 /* Declare _both_ variations of our code, statically,
  * with different prefixes. */
+DISABLE_GCC_WARNING("-Waggregate-return")
 PV_DECLARE(pclmul_, static,
            u128_from_bytes_pclmul,
            u128_to_bytes_pclmul,
@@ -337,6 +345,7 @@ PV_DECLARE(ctmul64_, static,
            struct expanded_key_none,
            expand_key_none,
            add_multiple_none)
+ENABLE_GCC_WARNING("-Waggregate-return")
 
 void
 polyval_key_init(polyval_key_t *pv, const uint8_t *key)
