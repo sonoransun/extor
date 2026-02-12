@@ -1,2 +1,0 @@
-  o Minor feature (pluggable transports, shutdown):
-    - Don't launch managed proxies on impending shutdown

@@ -1,3 +1,0 @@
-  o Minor bugfixes (relay) (bugfix on 0.4.9.x):
-    - Refuse to overwrite an existing *.secret_family_key when running
-      tor --keygen-family. Fixes bug 41184; bugfix on 0.4.9.x.

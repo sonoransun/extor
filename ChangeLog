@@ -130,6 +130,21 @@ Changes in version 0.4.9.5 - 2026-02-12
     - Use /data/local/tmp for data storage on Android by default. Closes
       ticket 40487. Patch from Hans-Christoph Steiner.
 
+  o Minor features (directory authority):
+    - Export unsigned consensus documents once we have seen a threshold
+      of signatures, as a step toward the consensus transparency
+      experiment.
+
+  o Minor features (fallbackdir):
+    - Regenerate fallback directories generated on February 12, 2026.
+
+  o Minor features (geoip data):
+    - Update the geoip files to match the IPFire Location Database,
+      as retrieved on 2026/02/12.
+
+  o Minor features (windows):
+    - Various compilation fixes for our Windows CI. Closes ticket 41214.
+
   o Minor bugfixes (exit relays):
     - Clip every returned DNS TTL to 60 (RESOLVED) in order to mitigate
       an exit DNS cache oracle. Fixes bug 40979; bugfix on 0.3.5.1-alpha.
@@ -189,6 +204,10 @@ Changes in version 0.4.9.5 - 2026-02-12
       intro point rotation. This reduces noise and errors when using
       hidden services with TestingTorNetwork enabled. Fixes bug 40922;
       bugfix on 0.3.2.1-alpha.
+
+  o Minor bugfixes (relay):
+    - Refuse to overwrite an existing *.secret_family_key when running
+      tor --keygen-family. Fixes bug 41184; bugfix on 0.4.9.1-alpha.
 
   o New system requirements:
     - When built with LibreSSL, Tor now requires LibreSSL 3.7 or later.
