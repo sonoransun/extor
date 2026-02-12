@@ -306,6 +306,10 @@ case "$TOR_VERSION" in
         TOR_VER_AT_LEAST_043=yes
         TOR_VER_AT_LEAST_044=yes
         ;;
+    0.5.0.*)
+        TOR_VER_AT_LEAST_043=yes
+        TOR_VER_AT_LEAST_044=yes
+        ;;
 esac
 
 #############################################################################

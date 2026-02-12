@@ -146,6 +146,9 @@ finish() {
 branch maint-0.4.8
 branch release-0.4.8
 
+branch maint-0.4.9
+branch release-0.4.9
+
 branch main
 
 finish
