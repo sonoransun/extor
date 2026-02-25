@@ -791,7 +791,8 @@ cmp_int_strings_(const void **_a, const void **_b)
 }
 
 /** Given a list of networkstatus_t votes, determine and return the number of
- * the highest consensus method that is supported by 2/3 of the voters. */
+ * the highest consensus method that is supported by more than 2/3 of the
+ * voters. */
 static int
 compute_consensus_method(smartlist_t *votes)
 {
@@ -812,6 +813,7 @@ compute_consensus_method(smartlist_t *votes)
   });
 
   smartlist_sort(all_methods, cmp_int_strings_);
+  /* find all the consensus methods supported by _more than_ min votes. */
   get_frequent_members(acceptable_methods, all_methods, min);
   n_ok = smartlist_len(acceptable_methods);
   if (n_ok) {
@@ -859,7 +861,7 @@ make_consensus_method_list(int low, int high, const char *separator)
 /** Helper: given <b>lst</b>, a list of version strings such that every
  * version appears once for every versioning voter who recommends it, return a
  * newly allocated string holding the resulting client-versions or
- * server-versions list. May change contents of <b>lst</b> */
+ * server-versions list. May change contents of <b>lst</b>. */
 static char *
 compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
 {
@@ -875,6 +877,7 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
     }
   } SMARTLIST_FOREACH_END(v);
   sort_version_list(lst, 0);
+  /* collect the versions recommended in _more than_ min versioning votes */
   get_frequent_members(good, lst, min);
   result = smartlist_join_strings(good, ",", 0, NULL);
   smartlist_free(good);
