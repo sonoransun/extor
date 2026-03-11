@@ -1,0 +1,28 @@
+if BUILD_TOR_GUI
+
+bin_PROGRAMS += src/tools/tor-gui/tor-gui
+
+src_tools_tor_gui_tor_gui_SOURCES = \
+	src/tools/tor-gui/tor_gui.c \
+	src/tools/tor-gui/tg_control.c \
+	src/tools/tor-gui/tg_http.c \
+	src/tools/tor-gui/tg_api.c \
+	src/tools/tor-gui/tg_events.c \
+	src/tools/tor-gui/tg_config.c \
+	src/tools/tor-gui/tg_qr.c \
+	src/tools/tor-gui/tg_json.c \
+	src/tools/tor-gui/tg_util.c \
+	src/tools/tor-gui/vendor/mongoose.c \
+	src/tools/tor-gui/vendor/qrcodegen.c
+
+src_tools_tor_gui_tor_gui_CPPFLAGS = $(AM_CPPFLAGS) -I$(srcdir)/src/tools/tor-gui
+
+# tor-gui is fully standalone - no Tor internal libraries needed
+src_tools_tor_gui_tor_gui_LDADD = @TOR_LIB_WS32@ @TOR_LIB_MATH@
+
+# On POSIX systems, link pthreads for the control port reader thread
+if THREADS_PTHREADS
+src_tools_tor_gui_tor_gui_LDADD += -lpthread
+endif
+
+endif

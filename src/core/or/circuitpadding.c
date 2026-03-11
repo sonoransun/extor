@@ -229,7 +229,13 @@ circpad_marked_circuit_for_padding(circuit_t *circ, int reason)
      * This will allow circuit_expire_old_circuits_clientside() to
      * close it.
      */
-    if (circ->padding_info[i]->last_cell_time_sec +
+    /* Detect backward clock jump: if last_cell_time is in the
+     * future, reset it to prevent padding machine deadlock. */
+    if (circ->padding_info[i]->last_cell_time_sec >
+        approx_time()) {
+      circ->padding_info[i]->last_cell_time_sec =
+        approx_time();
+    } else if (circ->padding_info[i]->last_cell_time_sec +
         (time_t)CIRCPAD_DELAY_MAX_SECS < approx_time()) {
       log_notice(LD_BUG, "Circuit %d was not marked for close because of a "
                "pending padding machine in index %d for over an hour. "

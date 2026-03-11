@@ -94,6 +94,8 @@ typedef struct cached_resolve_t {
   uint32_t ttl_ipv4; /**< What TTL did the nameserver tell us? */
   uint32_t ttl_ipv6; /**< What TTL did the nameserver tell us? */
   uint32_t ttl_hostname; /**< What TTL did the nameserver tell us? */
+  /** Monotonic time when this resolve was launched. */
+  uint32_t resolve_started_stamp;
   /** Connections that want to know when we get an answer for this resolve. */
   pending_connection_t *pending_connections;
   /** Position of this element in the heap*/

@@ -184,27 +184,55 @@ congestion_control_new_consensus_params(const networkstatus_t *ns)
 
 #define CWND_MAX_MIN 500
 #define CWND_MAX_MAX (INT32_MAX)
-  cwnd_max =
-    networkstatus_get_param(NULL, "cc_cwnd_max",
-        CWND_MAX_DFLT,
-        CWND_MAX_MIN,
-        CWND_MAX_MAX);
+  {
+    uint32_t old_cwnd_max = cwnd_max;
+    cwnd_max =
+      networkstatus_get_param(NULL, "cc_cwnd_max",
+          CWND_MAX_DFLT,
+          CWND_MAX_MIN,
+          CWND_MAX_MAX);
+    if (old_cwnd_max != cwnd_max) {
+      log_info(LD_CIRC,
+               "Congestion control: cwnd_max "
+               "changed %"PRIu32" -> %"PRIu32
+               " via consensus.",
+               old_cwnd_max, cwnd_max);
+    }
+  }
 
 #define RTT_RESET_PCT_MIN (0)
 #define RTT_RESET_PCT_MAX (100)
-  rtt_reset_pct =
-    networkstatus_get_param(NULL, "cc_rtt_reset_pct",
-        RTT_RESET_PCT_DFLT,
-        RTT_RESET_PCT_MIN,
-        RTT_RESET_PCT_MAX);
+  {
+    uint8_t old_rtt_reset_pct = rtt_reset_pct;
+    rtt_reset_pct =
+      networkstatus_get_param(NULL, "cc_rtt_reset_pct",
+          RTT_RESET_PCT_DFLT,
+          RTT_RESET_PCT_MIN,
+          RTT_RESET_PCT_MAX);
+    if (old_rtt_reset_pct != rtt_reset_pct) {
+      log_info(LD_CIRC,
+               "Congestion control: rtt_reset_pct "
+               "changed %u -> %u via consensus.",
+               old_rtt_reset_pct, rtt_reset_pct);
+    }
+  }
 
 #define SENDME_INC_MIN 1
 #define SENDME_INC_MAX (254)
-  cc_sendme_inc =
-    networkstatus_get_param(NULL, "cc_sendme_inc",
-        SENDME_INC_DFLT,
-        SENDME_INC_MIN,
-        SENDME_INC_MAX);
+  {
+    uint8_t old_sendme_inc = cc_sendme_inc;
+    cc_sendme_inc =
+      networkstatus_get_param(NULL, "cc_sendme_inc",
+          SENDME_INC_DFLT,
+          SENDME_INC_MIN,
+          SENDME_INC_MAX);
+    if (old_sendme_inc != cc_sendme_inc) {
+      log_info(LD_CIRC,
+               "Congestion control: sendme_inc "
+               "changed %u -> %u via consensus.",
+               old_sendme_inc, cc_sendme_inc);
+    }
+  }
 
 #define CC_ALG_MIN 0
 #define CC_ALG_MAX (NUM_CC_ALGS-1)

@@ -995,6 +995,72 @@ dos_note_circ_max_outq(const channel_t *chan)
   return;
 }
 
+/** Note that we've reached the circuit cell queue limit on the
+ * inbound direction for a circuit on the given channel. */
+void
+dos_note_circ_max_inq(const channel_t *chan)
+{
+  tor_addr_t addr;
+  clientmap_entry_t *entry;
+
+  tor_assert(chan);
+
+  /* Skip everything if circuit creation defense is disabled. */
+  if (!dos_cc_enabled) {
+    goto end;
+  }
+
+  /* Must be a client connection else we ignore. */
+  if (!channel_is_client(chan)) {
+    goto end;
+  }
+  /* Without an IP address, nothing can work. */
+  if (!channel_get_addr_if_possible(chan, &addr)) {
+    goto end;
+  }
+
+  /* We are only interested in client connection from the geoip
+   * cache. */
+  entry = geoip_lookup_client(&addr, NULL, GEOIP_CLIENT_CONNECT);
+  if (entry == NULL) {
+    goto end;
+  }
+
+  /* Is the client marked? If yes, just ignore. */
+  if (entry->dos_stats.cc_stats.marked_until_ts >= approx_time()) {
+    goto end;
+  }
+
+  /* If max outq parameter is 0, it means disabled, just ignore. */
+  if (dos_num_circ_max_outq == 0) {
+    goto end;
+  }
+
+  entry->dos_stats.num_circ_max_cell_queue_size++;
+
+  /* This is the detection. If we have reached the maximum amount of
+   * times a client IP is allowed to reach this limit, mark client. */
+  if (entry->dos_stats.num_circ_max_cell_queue_size >=
+      dos_num_circ_max_outq) {
+    /* Only account for this marked address if this is the first time
+     * we block it else our counter is inflated with non unique
+     * entries. */
+    if (entry->dos_stats.cc_stats.marked_until_ts == 0) {
+      cc_num_marked_addrs_max_queue++;
+    }
+    log_info(LD_DOS, "Detected inbound max circuit queue "
+             "from addr: %s", fmt_addr(&addr));
+    cc_mark_client(&entry->dos_stats.cc_stats);
+
+    /* Reset after being marked so once unmarked, we start back
+     * clean. */
+    entry->dos_stats.num_circ_max_cell_queue_size = 0;
+  }
+
+ end:
+  return;
+}
+
 /* Note down that we've just refused a single hop client. This increments a
  * counter later used for the heartbeat. */
 void

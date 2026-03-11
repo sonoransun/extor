@@ -319,6 +319,23 @@ control_event_bootstrap_problem(const char *warn, const char *reason,
          bootstrap_problems, recommendation,
          or_id, hostaddr);
 
+  if (dowarn) {
+    const char *guidance = NULL;
+    if (status <= 5)
+      guidance = "Check network connectivity and "
+                 "firewall settings.";
+    else if (status <= 14)
+      guidance = "The relay may be down or "
+                 "unreachable. Tor will try others.";
+    else if (status <= 80)
+      guidance = "Directory information is slow to "
+                 "load. Verify your system clock "
+                 "is correct.";
+    if (guidance)
+      log_notice(LD_GENERAL,
+                 "Bootstrap hint: %s", guidance);
+  }
+
   connection_or_report_broken_states(severity, LD_HANDSHAKE);
 
   tor_snprintf(buf, sizeof(buf),

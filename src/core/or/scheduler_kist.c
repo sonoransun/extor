@@ -664,6 +664,7 @@ kist_scheduler_run(void)
       }
       /* flush_result has the # cells flushed */
       if (flush_result > 0) {
+        chan->sched_starve_count = 0;
         update_socket_written(&socket_table, chan, flush_result *
                               (CELL_MAX_NETWORK_SIZE + TLS_PER_CELL_OVERHEAD));
       } else {
@@ -724,6 +725,20 @@ kist_scheduler_run(void)
        * after the scheduling loop is over. They can hopefully be taken care of
        * in the next scheduling round.
        */
+      chan->sched_starve_count++;
+      if (chan->sched_starve_count >= 200) {
+        char *msg;
+        static ratelim_t starvation_rl = RATELIM_INIT(60);
+        if ((msg = rate_limit_log(&starvation_rl,
+                                  approx_time()))) {
+          log_warn(LD_SCHED,
+                   "Channel %" PRIu64 " has been starved "
+                   "for %u scheduler rounds.%s",
+                   chan->global_identifier,
+                   (unsigned)chan->sched_starve_count, msg);
+          tor_free(msg);
+        }
+      }
       if (!to_readd) {
         to_readd = smartlist_new();
       }

@@ -82,7 +82,9 @@
  * desktop, it claims to be 1 msec, but it will depend on the system HZ
  * setting. Storing monotime_coarse_t uses 16 bytes.
  *
- * [TODO: Try CLOCK_MONOTONIC_FAST on foobsd.]
+ * On FreeBSD, monotime_coarse uses clock_gettime() with
+ * CLOCK_MONOTONIC_FAST, which is analogous to Linux's
+ * CLOCK_MONOTONIC_COARSE.
  *
  * Q: What backends is regular monotonic time using?
  *
@@ -179,7 +181,8 @@ typedef struct monotime_t {
 #endif /* defined(__APPLE__) || ... */
 } monotime_t;
 
-#if defined(CLOCK_MONOTONIC_COARSE) && \
+#if (defined(CLOCK_MONOTONIC_COARSE) || \
+     defined(CLOCK_MONOTONIC_FAST)) && \
   defined(HAVE_CLOCK_GETTIME)
 #define MONOTIME_COARSE_FN_IS_DIFFERENT
 #define monotime_coarse_t monotime_t

@@ -93,6 +93,18 @@ static void connection_or_mark_bad_for_new_circs(or_connection_t *or_conn);
 static void connection_or_check_canonicity(or_connection_t *conn,
                                            int started_here);
 
+/** Return the configured handshake timeout for OR connections,
+ * in seconds. This is a consensus parameter. */
+int
+get_or_handshake_timeout(void)
+{
+  return (int)networkstatus_get_param(NULL,
+    "or-conn-handshake-timeout",
+    60,   /* default: 60 seconds */
+    10,   /* minimum: 10 seconds */
+    300); /* maximum: 5 minutes */
+}
+
 /**************************************************************/
 
 /**

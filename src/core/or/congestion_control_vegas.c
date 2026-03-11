@@ -241,7 +241,7 @@ congestion_control_vegas_log(const circuit_t *circ,
              vegas_bdp(cc),
              queue_use,
              cc->cwnd*CELL_MAX_NETWORK_SIZE*1000/
-                MAX(cc->min_rtt_usec,cc->ewma_rtt_usec),
+                MAX(1, MAX(cc->min_rtt_usec,cc->ewma_rtt_usec)),
              cc->in_slow_start
              );
   } else {
@@ -262,7 +262,7 @@ congestion_control_vegas_log(const circuit_t *circ,
              vegas_bdp(cc),
              queue_use,
              cc->cwnd*CELL_MAX_NETWORK_SIZE*1000/
-                MAX(cc->min_rtt_usec,cc->ewma_rtt_usec),
+                MAX(1, MAX(cc->min_rtt_usec,cc->ewma_rtt_usec)),
              cc->in_slow_start
              );
   }
@@ -286,7 +286,7 @@ rfc3742_ss_inc(const congestion_control_t *cc)
     // Return at least 1 for inc.
     return MAX(
             ((uint64_t)cc->sendme_inc*cc->vegas_params.ss_cwnd_cap + cc->cwnd)/
-                 (2*cc->cwnd),
+                 MAX(1, 2*cc->cwnd),
                1);
   }
 }

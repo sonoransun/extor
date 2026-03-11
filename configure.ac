@@ -96,6 +96,8 @@ AC_ARG_ENABLE(nss,
    AS_HELP_STRING(--enable-nss, [Use Mozilla's NSS TLS library. (EXPERIMENTAL)]))
 AC_ARG_ENABLE(pic,
    AS_HELP_STRING(--enable-pic, [Build Tor's binaries as position-independent code, suitable to link as a library.]))
+AC_ARG_ENABLE(gui,
+   AS_HELP_STRING(--enable-gui, [Build tor-gui, a web-based GUI for Tor configuration. Requires no external dependencies.]))
 
 AC_ARG_ENABLE(missing-doc-warnings,
    AS_HELP_STRING(--enable-missing-doc-warnings, [Tell doxygen to warn about missing documentation. Makes doxygen warnings nonfatal.]))
@@ -126,6 +128,7 @@ AM_CONDITIONAL(LIBFUZZER_ENABLED, test "x$enable_libfuzzer" = "xyes")
 AM_CONDITIONAL(OSS_FUZZ_ENABLED, test "x$enable_oss_fuzz" = "xyes")
 AM_CONDITIONAL(USE_NSS, test "x$enable_nss" = "xyes")
 AM_CONDITIONAL(USE_OPENSSL, test "x$enable_nss" != "xyes")
+AM_CONDITIONAL(BUILD_TOR_GUI, test "x$enable_gui" = "xyes")
 
 if test "x$enable_coverage" = "xyes"; then
   AC_DEFINE(ENABLE_COVERAGE, 1,

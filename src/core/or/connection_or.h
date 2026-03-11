@@ -128,4 +128,6 @@ STATIC void note_or_connect_failed(const or_connection_t *or_conn);
 MOCK_DECL(void, connection_or_change_state,
           (or_connection_t *conn, uint8_t state));
 
+int get_or_handshake_timeout(void);
+
 #endif /* !defined(TOR_CONNECTION_OR_H) */

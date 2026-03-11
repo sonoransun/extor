@@ -127,8 +127,11 @@ do_hup(void)
     /* no need to provide argc/v, they've been cached in init_from_config */
     int init_rv = options_init_from_torrc(0, NULL);
     if (init_rv < 0) {
-      log_err(LD_CONFIG,"Reading config failed--see warnings above. "
-              "For usage, try -h.");
+      log_err(LD_CONFIG,
+              "Config reload failed. Check torrc syntax "
+              "and warnings above. Config file: %s",
+              get_torrc_fname(0) ?
+              get_torrc_fname(0) : "(unknown)");
       return -1;
     } else if (BUG(init_rv > 0)) {
       // LCOV_EXCL_START

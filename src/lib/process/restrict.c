@@ -153,7 +153,15 @@ tor_mlockall(void)
     return -1;
   }
 #else /* !defined(HAVE_UNIX_MLOCKALL) */
-  log_warn(LD_GENERAL, "Unable to lock memory pages. mlockall() unsupported?");
+  log_warn(LD_GENERAL,
+           "Unable to lock all memory pages "
+           "(mlockall unavailable on this "
+           "platform). Sensitive data may be "
+           "paged to disk. To fix: ensure Tor "
+           "has CAP_IPC_LOCK capability, or "
+           "increase RLIMIT_MEMLOCK (ulimit -l), "
+           "or build on a platform with "
+           "mlockall() support.");
   return -1;
 #endif /* defined(HAVE_UNIX_MLOCKALL) */
 }

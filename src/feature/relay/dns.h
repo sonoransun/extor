@@ -29,6 +29,7 @@ size_t dns_cache_total_allocation(void);
 void dump_dns_mem_usage(int severity);
 size_t dns_cache_handle_oom(time_t now, size_t min_remove_bytes);
 void dns_new_consensus_params(const networkstatus_t *ns);
+int dns_get_adaptive_timeout_secs(void);
 
 /* These functions are only used within the feature/relay module, and don't
  * need stubs. */
@@ -54,6 +55,7 @@ void dns_launch_correctness_checks(void);
   ((void)(now), (void)(bytes), 0)
 #define dns_new_consensus_params(ns) \
   ((void) ns)
+#define dns_get_adaptive_timeout_secs() (5)
 
 #define connection_dns_remove(conn) \
   STMT_BEGIN                        \

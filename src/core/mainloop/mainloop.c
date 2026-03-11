@@ -1238,10 +1238,21 @@ run_connection_housekeeping(int i, time_t now)
                                    "Tor gave up on the connection");
     connection_or_close_normally(TO_OR_CONN(conn), 1);
   } else if (!connection_state_is_open(conn)) {
-    if (past_keepalive) {
-      /* We never managed to actually get this connection open and happy. */
-      log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
-               (int)conn->s, fmt_and_decorate_addr(&conn->addr), conn->port);
+    int handshake_timeout = get_or_handshake_timeout();
+    if (now >= conn->timestamp_created + handshake_timeout) {
+      log_info(LD_OR,
+               "Expiring non-open OR connection to fd %d "
+               "(%s:%d): handshake not completed within "
+               "%d seconds (state=%d).",
+               (int)conn->s,
+               fmt_and_decorate_addr(&conn->addr),
+               conn->port,
+               handshake_timeout,
+               conn->state);
+      if (conn->state == OR_CONN_STATE_CONNECTING)
+        connection_or_connect_failed(TO_OR_CONN(conn),
+                                     END_OR_CONN_REASON_TIMEOUT,
+                                     "Handshake timed out");
       connection_or_close_normally(TO_OR_CONN(conn), 0);
     }
   } else if (we_are_hibernating() &&
@@ -2339,6 +2350,12 @@ ip_address_changed(int on_client_conn)
        * policies, when ExitPolicyRejectLocalInterfaces is set. */
       mark_my_descriptor_dirty("IP address changed");
     }
+  }
+
+  /* On IP address change (likely network reconnection),
+   * reset guard reachability so we retry them promptly. */
+  if (on_client_conn) {
+    entry_guards_network_change(get_guard_selection_info());
   }
 
   dns_servers_relaunch_checks();

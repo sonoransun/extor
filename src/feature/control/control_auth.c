@@ -174,11 +174,15 @@ handle_control_authchallenge(control_connection_t *conn,
   if (strcasecmp(smartlist_get(args->args, 0), "SAFECOOKIE")) {
     control_write_endreply(conn, 513,
                            "AUTHCHALLENGE only supports SAFECOOKIE "
-                           "authentication");
+                           "authentication type. Use AUTHENTICATE "
+                           "for password or cookie methods.");
     goto fail;
   }
   if (!authentication_cookie_is_set) {
-    control_write_endreply(conn, 515, "Cookie authentication is disabled");
+    control_write_endreply(conn, 515,
+                           "Cookie authentication is disabled. "
+                           "Set CookieAuthentication 1 in torrc "
+                           "to enable it.");
     goto fail;
   }
   if (args->kwargs == NULL || args->kwargs->next != NULL) {
@@ -444,6 +448,17 @@ handle_control_authenticate(control_connection_t *conn,
  err:
   tor_free(password);
   control_printf_endreply(conn, 515, "Authentication failed: %s", errstr);
+  {
+    static ratelim_t auth_rl = RATELIM_INIT(60);
+    char *m;
+    if ((m = rate_limit_log(&auth_rl,
+                            approx_time()))) {
+      log_warn(LD_CONTROL,
+               "Control port authentication "
+               "failure.%s", m);
+      tor_free(m);
+    }
+  }
   connection_mark_for_close(TO_CONN(conn));
   if (sl) { /* clean up */
     SMARTLIST_FOREACH(sl, char *, str, tor_free(str));

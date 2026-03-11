@@ -357,6 +357,7 @@ MOCK_DECL(void, clock_skew_warning,
            const char *source));
 
 int connection_is_moribund(struct connection_t *conn);
+void connection_check_soft_oos(int n_socks);
 void connection_check_oos(int n_socks, int failed);
 
 /** Execute the statement <b>stmt</b>, which may log events concerning the

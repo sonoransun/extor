@@ -87,6 +87,12 @@ ENABLE_GCC_WARNING("-Wstrict-prototypes")
 #include <string.h>
 #include <errno.h>
 
+#ifndef _WIN32
+/** PID of last process that used this RNG.
+ * Used to detect forks without proper crypto_postfork(). */
+static pid_t crypto_rand_last_pid_ = 0;
+#endif
+
 /**
  * How many bytes of entropy we add at once.
  *
@@ -491,6 +497,20 @@ crypto_rand, (char *to, size_t n))
 void
 crypto_rand_unmocked(char *to, size_t n)
 {
+#ifndef _WIN32
+  {
+    pid_t pid = getpid();
+    if (PREDICT_UNLIKELY(crypto_rand_last_pid_ != 0 &&
+                         crypto_rand_last_pid_ != pid)) {
+      log_warn(LD_CRYPTO,
+               "PID changed (%d to %d) without "
+               "crypto_postfork(). Reseeding RNG.",
+               (int)crypto_rand_last_pid_, (int)pid);
+      crypto_seed_rng();
+    }
+    crypto_rand_last_pid_ = pid;
+  }
+#endif
   if (n == 0)
     return;
 

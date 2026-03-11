@@ -2643,6 +2643,35 @@ cleanup_intro_points(hs_service_t *service, time_t now)
     service_intro_point_free(ip);
   } SMARTLIST_FOREACH_END(ip);
 
+  /* If we removed any intro points, check remaining count and
+   * warn if the service is becoming unreachable. */
+  if (smartlist_len(ips_to_free) > 0) {
+    int remaining = 0;
+    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+      remaining +=
+        (int) digest256map_size(desc->intro_points.map);
+    } FOR_EACH_DESCRIPTOR_END;
+
+    if (remaining == 0) {
+      log_warn(LD_REND,
+               "Hidden service %s has zero "
+               "introduction points. Service is "
+               "unreachable until new intro points "
+               "are established.",
+               safe_str_client(
+                 service->onion_address));
+    } else if (remaining <=
+               NUM_INTRO_POINTS_DEFAULT / 2) {
+      log_notice(LD_REND,
+                 "Hidden service %s has only %d "
+                 "introduction points (target: %d).",
+                 safe_str_client(
+                   service->onion_address),
+                 remaining,
+                 NUM_INTRO_POINTS_DEFAULT);
+    }
+  }
+
   smartlist_free(ips_to_free);
 }
 

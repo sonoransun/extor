@@ -93,6 +93,8 @@ const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
 const routerstatus_t *router_pick_fallback_dirserver(dirinfo_type_t type,
                                                      int flags);
 
+void fallback_dirs_adjust_weights_for_geodiversity(void);
+
 #ifdef NODE_SELECT_PRIVATE
 STATIC int choose_array_element_by_weight(const uint64_t *entries,
                                           int n_entries);

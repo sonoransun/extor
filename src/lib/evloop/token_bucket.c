@@ -87,6 +87,10 @@ token_bucket_raw_refill_steps(token_bucket_raw_t *bucket,
    * should catch it. */
   const size_t gap = ((size_t)cfg->burst) - ((size_t)bucket->bucket);
 
+  if (PREDICT_UNLIKELY(cfg->rate == 0)) {
+    return was_empty && bucket->bucket > 0;
+  }
+
   if (elapsed > gap / cfg->rate) {
     bucket->bucket = cfg->burst;
   } else {

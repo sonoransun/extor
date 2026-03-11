@@ -47,7 +47,10 @@ network_init(void)
   int r;
   r = WSAStartup(0x101,&WSAData);
   if (r) {
-    log_warn(LD_NET,"Error initializing windows network layer: code was %d",r);
+    log_warn(LD_NET,
+             "Error initializing windows network layer "
+             "(WSAStartup): %s (code %d)",
+             tor_socket_strerror(r), r);
     return -1;
   }
   if (sizeof(SOCKET) != sizeof(tor_socket_t)) {

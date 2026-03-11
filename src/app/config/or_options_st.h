@@ -364,6 +364,8 @@ struct or_options_t {
                               *   have this many. */
   int ConnLimit_low_thresh; /**< try to get down to here after socket
                              *   exhaustion. */
+  int ConnLimit_soft_thresh; /**< Soft OOS watermark at 85% of
+                              * ConnLimit_ for proactive cleanup. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */
   int FascistFirewall; /**< Whether to prefer ORs reachable on open ports. */
   struct smartlist_t *FirewallPorts; /**< Which ports our firewall allows

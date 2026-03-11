@@ -217,12 +217,23 @@ log_heartbeat(time_t now)
 
   dirclient_dump_total_dls();
 
+  {
+    size_t alloc = buf_get_total_allocation();
+    log_fn(LOG_NOTICE, LD_HEARTBEAT,
+           "Heartbeat: Using approximately %"TOR_PRIuSZ
+           " kB in buffers. Open sockets: %d.",
+           (alloc / 1024),
+           get_n_open_sockets());
+  }
+
   if (server_mode(options) && accounting_is_enabled(options) && !hibernating) {
     log_accounting(now, options);
   }
 
   double fullness_pct = 100;
-  // TODO CGO: This is slightly wrong?
+  /* Cell fullness is the average data fill ratio. This
+   * slightly underestimates true fullness because each
+   * stream's final cell is typically partial. */
   if (stats_n_data_cells_packaged && !hibernating) {
     fullness_pct =
       100*(((double)stats_n_data_bytes_packaged) /

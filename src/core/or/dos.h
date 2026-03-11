@@ -83,6 +83,7 @@ void dos_close_client_conn(const or_connection_t *or_conn);
 int dos_should_refuse_single_hop_client(void);
 void dos_note_refuse_single_hop_client(void);
 void dos_note_circ_max_outq(const channel_t *chan);
+void dos_note_circ_max_inq(const channel_t *chan);
 
 uint32_t dos_get_num_cc_marked_addr(void);
 uint32_t dos_get_num_cc_marked_addr_maxq(void);

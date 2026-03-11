@@ -116,6 +116,9 @@ struct entry_guard_t {
    * successfully and decide to keep it?) This field is zero if this is not a
    * confirmed guard. */
   time_t confirmed_on_date; /* 0 if not confirmed */
+  /** When did we last successfully use a circuit through
+   * this guard? Persistent. 0 means "unknown/never". */
+  time_t last_successful_use;
   /**
    * In what order was this guard sampled? Guards with
    * lower indices appear earlier on the sampled list, the confirmed list and
@@ -163,6 +166,12 @@ struct entry_guard_t {
    * when we mark the guard as "MAYBE" reachable.
    */
   time_t failing_since;
+
+  /** Count of consecutive connection/circuit failures since
+   * last success. Used for rapid failure detection. */
+  unsigned int consecutive_failures;
+  /** Timestamp of most recent failure. */
+  time_t last_failure_at;
 
   /* == Set inclusion flags. */
   /** If true, this guard is in the filtered set.  The filtered set includes
@@ -408,6 +417,7 @@ int entry_guards_upgrade_waiting_circuits(guard_selection_t *gs,
                                           smartlist_t *newly_complete_out);
 int entry_guard_state_should_expire(circuit_guard_state_t *guard_state);
 void entry_guards_note_internet_connectivity(guard_selection_t *gs);
+void entry_guards_network_change(guard_selection_t *gs);
 
 int update_guard_selection_choice(const or_options_t *options);
 

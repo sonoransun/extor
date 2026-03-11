@@ -372,7 +372,7 @@ monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
 /* end of "__APPLE__" */
 #elif defined(HAVE_CLOCK_GETTIME)
 
-#ifdef CLOCK_MONOTONIC_COARSE
+#if defined(CLOCK_MONOTONIC_COARSE)
 /**
  * Which clock should we use for coarse-grained monotonic time? By default
  * this is CLOCK_MONOTONIC_COARSE, but it might not work -- for example,
@@ -380,19 +380,31 @@ monotime_add_msec(monotime_t *out, const monotime_t *val, uint32_t msec)
  * an old Linux kernel. In that case, we will fall back to CLOCK_MONOTONIC.
  */
 static int clock_monotonic_coarse = CLOCK_MONOTONIC_COARSE;
-#endif /* defined(CLOCK_MONOTONIC_COARSE) */
+#elif defined(CLOCK_MONOTONIC_FAST)
+/** FreeBSD provides CLOCK_MONOTONIC_FAST as its coarse monotonic
+ * clock, analogous to Linux's CLOCK_MONOTONIC_COARSE. */
+static int clock_monotonic_coarse = CLOCK_MONOTONIC_FAST;
+#endif /* defined(CLOCK_MONOTONIC_COARSE) || ... */
 
 static void
 monotime_init_internal(void)
 {
-#ifdef CLOCK_MONOTONIC_COARSE
+#if defined(CLOCK_MONOTONIC_COARSE)
   struct timespec ts;
   if (clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) < 0) {
     log_info(LD_GENERAL, "CLOCK_MONOTONIC_COARSE isn't working (%s); "
              "falling back to CLOCK_MONOTONIC.", strerror(errno));
     clock_monotonic_coarse = CLOCK_MONOTONIC;
   }
-#endif /* defined(CLOCK_MONOTONIC_COARSE) */
+#elif defined(CLOCK_MONOTONIC_FAST)
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC_FAST, &ts) < 0) {
+    log_info(LD_GENERAL, "CLOCK_MONOTONIC_FAST isn't working "
+             "(%s); falling back to CLOCK_MONOTONIC.",
+             strerror(errno));
+    clock_monotonic_coarse = CLOCK_MONOTONIC;
+  }
+#endif /* defined(CLOCK_MONOTONIC_COARSE) || ... */
 }
 
 void
@@ -409,7 +421,7 @@ monotime_get(monotime_t *out)
   tor_assert(r == 0);
 }
 
-#ifdef CLOCK_MONOTONIC_COARSE
+#if defined(CLOCK_MONOTONIC_COARSE) || defined(CLOCK_MONOTONIC_FAST)
 void
 monotime_coarse_get(monotime_coarse_t *out)
 {
@@ -421,6 +433,7 @@ monotime_coarse_get(monotime_coarse_t *out)
   }
 #endif /* defined(TOR_UNIT_TESTS) */
   int r = clock_gettime(clock_monotonic_coarse, &out->ts_);
+#if defined(CLOCK_MONOTONIC_COARSE)
   if (PREDICT_UNLIKELY(r < 0) &&
       errno == EINVAL &&
       clock_monotonic_coarse == CLOCK_MONOTONIC_COARSE) {
@@ -431,10 +444,22 @@ monotime_coarse_get(monotime_coarse_t *out)
     clock_monotonic_coarse = CLOCK_MONOTONIC;
     r = clock_gettime(clock_monotonic_coarse, &out->ts_);
   }
+#elif defined(CLOCK_MONOTONIC_FAST)
+  if (PREDICT_UNLIKELY(r < 0) &&
+      errno == EINVAL &&
+      clock_monotonic_coarse == CLOCK_MONOTONIC_FAST) {
+    log_warn(LD_BUG, "Falling back to non-coarse "
+             "monotonic time %s initial system start?",
+             monotime_initialized?"after":"without");
+    clock_monotonic_coarse = CLOCK_MONOTONIC;
+    r = clock_gettime(clock_monotonic_coarse, &out->ts_);
+  }
+#endif /* defined(CLOCK_MONOTONIC_COARSE) || ... */
 
   tor_assert(r == 0);
 }
-#endif /* defined(CLOCK_MONOTONIC_COARSE) */
+#endif /* defined(CLOCK_MONOTONIC_COARSE) ||
+          defined(CLOCK_MONOTONIC_FAST) */
 
 int64_t
 monotime_diff_nsec(const monotime_t *start,

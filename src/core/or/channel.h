@@ -295,6 +295,10 @@ struct channel_t {
   /** Heap index for use by the scheduler */
   int sched_heap_idx;
 
+  /** Count of consecutive scheduler rounds where this channel had
+   * cells queued but could not write. Used for starvation detection. */
+  uint16_t sched_starve_count;
+
   /** Timestamps for both cell channels and listeners */
   time_t timestamp_created; /* Channel created */
   time_t timestamp_active; /* Any activity */

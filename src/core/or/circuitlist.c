@@ -2511,13 +2511,22 @@ circuit_max_queued_cell_age(const circuit_t *c, uint32_t now)
   uint32_t age = 0;
   packed_cell_t *cell;
 
-  if (NULL != (cell = TOR_SIMPLEQ_FIRST(&c->n_chan_cells.head)))
+  if (NULL != (cell = TOR_SIMPLEQ_FIRST(&c->n_chan_cells.head))) {
     age = now - cell->inserted_timestamp;
+    /* Guard against uint32_t wraparound after ~49 days.
+     * If age > UINT32_MAX/2, the timestamp likely wrapped;
+     * cap it so the OOM handler treats this circuit as very
+     * old rather than very young. */
+    if (age > UINT32_MAX / 2)
+      age = UINT32_MAX / 2;
+  }
 
   if (! CIRCUIT_IS_ORIGIN(c)) {
     const or_circuit_t *orcirc = CONST_TO_OR_CIRCUIT(c);
     if (NULL != (cell = TOR_SIMPLEQ_FIRST(&orcirc->p_chan_cells.head))) {
       uint32_t age2 = now - cell->inserted_timestamp;
+      if (age2 > UINT32_MAX / 2)
+        age2 = UINT32_MAX / 2;
       if (age2 > age)
         return age2;
     }
@@ -2535,11 +2544,15 @@ conn_get_buffer_age(const connection_t *conn, uint32_t now_ts)
   uint32_t age = 0, age2;
   if (conn->outbuf) {
     age2 = buf_get_oldest_chunk_timestamp(conn->outbuf, now_ts);
+    if (age2 > UINT32_MAX / 2)
+      age2 = UINT32_MAX / 2;
     if (age2 > age)
       age = age2;
   }
   if (conn->inbuf) {
     age2 = buf_get_oldest_chunk_timestamp(conn->inbuf, now_ts);
+    if (age2 > UINT32_MAX / 2)
+      age2 = UINT32_MAX / 2;
     if (age2 > age)
       age = age2;
   }

@@ -97,6 +97,7 @@
 #include "feature/metrics/metrics.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/networkstatus.h"
+#include "feature/nodelist/node_select.h"
 #include "feature/nodelist/nickname.h"
 #include "feature/nodelist/nodelist.h"
 #include "feature/nodelist/routerlist.h"
@@ -1361,6 +1362,9 @@ consider_adding_dir_servers(const or_options_t *options,
   for (cl = options->FallbackDir; cl; cl = cl->next)
     if (parse_dir_fallback_line(cl->value, 0)<0)
       return -1;
+
+  fallback_dirs_adjust_weights_for_geodiversity();
+
   return 0;
 }
 
@@ -1648,6 +1652,13 @@ options_start_listener_transaction(const or_options_t *old_options,
                             "See logs for details.");
       goto rollback;
     }
+    if (options->ConnLimit_ < options->ConnLimit) {
+      log_warn(LD_CONFIG,
+               "ConnLimit %d exceeds system limit; "
+               "capped to %d.",
+               options->ConnLimit,
+               options->ConnLimit_);
+    }
     xn->set_conn_limit = true;
     if (old_options)
       xn->old_conn_limit = (unsigned)old_options->ConnLimit;
@@ -1733,12 +1744,16 @@ options_commit_listener_transaction(listener_transaction_t *xn)
 
     options->ConnLimit_high_thresh = options->ConnLimit_ - socks_in_reserve;
     options->ConnLimit_low_thresh = (options->ConnLimit_ / 4) * 3;
+    options->ConnLimit_soft_thresh =
+      (options->ConnLimit_ * 85) / 100;
     log_info(LD_GENERAL,
              "Recomputed OOS thresholds: ConnLimit %d, ConnLimit_ %d, "
-             "ConnLimit_high_thresh %d, ConnLimit_low_thresh %d",
+             "ConnLimit_high_thresh %d, ConnLimit_low_thresh %d, "
+             "ConnLimit_soft_thresh %d",
              options->ConnLimit, options->ConnLimit_,
              options->ConnLimit_high_thresh,
-             options->ConnLimit_low_thresh);
+             options->ConnLimit_low_thresh,
+             options->ConnLimit_soft_thresh);
 
     /* Give the OOS handler a chance with the new thresholds */
     connection_check_oos(get_n_open_sockets(), 0);
@@ -3771,7 +3786,9 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
   if (options->HTTPProxy) { /* parse it now */
     if (tor_addr_port_lookup(options->HTTPProxy,
                         &options->HTTPProxyAddr, &options->HTTPProxyPort) < 0)
-      REJECT("HTTPProxy failed to parse or resolve. Please fix.");
+      REJECT("HTTPProxy failed to parse or resolve. "
+             "Expected format: host[:port] "
+             "(e.g., 127.0.0.1:8080).");
     if (options->HTTPProxyPort == 0) { /* give it a default */
       options->HTTPProxyPort = 80;
     }
@@ -3810,7 +3827,9 @@ options_validate_cb(const void *old_options_, void *options_, char **msg)
     if (tor_addr_port_lookup(options->Socks5Proxy,
                             &options->Socks5ProxyAddr,
                             &options->Socks5ProxyPort) <0)
-      REJECT("Socks5Proxy failed to parse or resolve. Please fix.");
+      REJECT("Socks5Proxy failed to parse or resolve. "
+             "Expected format: host[:port] "
+             "(e.g., 127.0.0.1:1080).");
     if (options->Socks5ProxyPort == 0) { /* give it a default */
       options->Socks5ProxyPort = 1080;
     }
@@ -5173,7 +5192,9 @@ parse_bridge_line(const char *line)
 
   if (tor_addr_port_parse(LOG_INFO, addrport,
                           &bridge_line->addr, &bridge_line->port, 443)<0) {
-    log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
+    log_warn(LD_CONFIG, "Error parsing Bridge address '%s'. "
+             "Expected: [transport] IP:port [fingerprint]",
+             addrport);
     goto err;
   }
 
@@ -5694,13 +5715,17 @@ parse_dir_authority_line(const char *line, dirinfo_type_t required_type,
   smartlist_del_keeporder(items, 0);
 
   if (tor_addr_port_split(LOG_WARN, addrport, &address, &dir_port) < 0) {
-    log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s'.", addrport);
+    log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s'. "
+             "Expected: nickname flags address:port fingerprint",
+             addrport);
     goto err;
   }
 
   if (!string_is_valid_ipv4_address(address)) {
     log_warn(LD_CONFIG, "Error parsing DirAuthority address '%s' "
-                        "(invalid IPv4 address)", address);
+             "(invalid IPv4 address). "
+             "Expected: nickname flags address:port fingerprint",
+             address);
     goto err;
   }
 

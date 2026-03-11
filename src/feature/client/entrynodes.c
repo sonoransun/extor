@@ -1465,6 +1465,37 @@ sampled_guards_update_from_consensus(guard_selection_t *gs)
      */
     entry_guards_changed_for_guard_selection(gs);
   }
+
+  /* Sweep confirmed guards for staleness. If a confirmed
+   * guard hasn't been successfully used in a long time,
+   * demote it to unconfirmed so better candidates can
+   * take its primary slot. */
+  {
+    const int stale_days = (int)networkstatus_get_param(
+      NULL, "guard-confirmed-idle-timeout-days",
+      30, 7, 365);
+    const time_t stale_cutoff =
+      approx_time() - (stale_days * 86400);
+
+    SMARTLIST_FOREACH_BEGIN(gs->confirmed_entry_guards,
+                            entry_guard_t *, guard) {
+      if (guard->confirmed_idx >= 0 &&
+          guard->last_successful_use > 0 &&
+          guard->last_successful_use < stale_cutoff) {
+        log_info(LD_GUARD,
+                 "Demoting stale confirmed guard %s: "
+                 "last used %d days ago.",
+                 entry_guard_describe(guard),
+                 (int)((approx_time() -
+                        guard->last_successful_use)
+                       / 86400));
+        guard->confirmed_on_date = 0;
+        guard->confirmed_idx = -1;
+        SMARTLIST_DEL_CURRENT(
+          gs->confirmed_entry_guards, guard);
+      }
+    } SMARTLIST_FOREACH_END(guard);
+  }
 }
 
 /**
@@ -2089,9 +2120,38 @@ entry_guard_consider_retry(entry_guard_t *guard)
     return; /* No retry needed. */
 
   const time_t now = approx_time();
-  const int delay =
+  int delay =
     get_retry_schedule(guard->failing_since, now, guard->is_primary);
   const time_t last_attempt = guard->last_tried_to_connect;
+
+  /* If the guard has failed rapidly (3+ times in 5 minutes),
+   * triple the retry delay to avoid wasting circuit attempts
+   * on a clearly broken guard. */
+  {
+    const int rapid_count = (int)networkstatus_get_param(NULL,
+      "guard-rapid-failure-count", 3, 2, 10);
+    const int rapid_window = (int)networkstatus_get_param(NULL,
+      "guard-rapid-failure-window", 300, 60, 3600);
+    if ((int)guard->consecutive_failures >= rapid_count &&
+        guard->last_failure_at > 0 &&
+        now - guard->last_failure_at < rapid_window) {
+      delay *= 3;
+      if (delay > 36 * 60 * 60)
+        delay = 36 * 60 * 60;
+    }
+  }
+
+  /* Add +/- 20% jitter to prevent thundering herd when
+   * multiple clients retry the same guard simultaneously. */
+  {
+    int jitter_range = delay / 5;
+    if (jitter_range > 0) {
+      delay += crypto_rand_int(jitter_range * 2 + 1)
+               - jitter_range;
+      if (delay < 1)
+        delay = 1;
+    }
+  }
 
   /* Check if it is a bridge and we don't have its descriptor yet */
   if (guard->bridge_addr && !guard_has_descriptor(guard)) {
@@ -2124,6 +2184,23 @@ entry_guard_consider_retry(entry_guard_t *guard)
 void
 entry_guards_note_internet_connectivity(guard_selection_t *gs)
 {
+  gs->last_time_on_internet = approx_time();
+}
+
+/** Called when a network connectivity change is detected
+ * (e.g., IP address changed). Reset primary guard
+ * reachability from NO to MAYBE so they are retried
+ * promptly, without disturbing confirmed/sampled state. */
+void
+entry_guards_network_change(guard_selection_t *gs)
+{
+  if (!gs)
+    return;
+
+  log_info(LD_GUARD,
+           "Network change detected; resetting primary "
+           "guard reachability.");
+  mark_primary_guards_maybe_reachable(gs);
   gs->last_time_on_internet = approx_time();
 }
 
@@ -2366,6 +2443,8 @@ entry_guards_note_guard_failure(guard_selection_t *gs,
   guard->is_usable_filtered_guard = 0;
 
   guard->is_pending = 0;
+  guard->consecutive_failures++;
+  guard->last_failure_at = approx_time();
   if (guard->failing_since == 0)
     guard->failing_since = approx_time();
 
@@ -2417,6 +2496,9 @@ entry_guards_note_guard_success(guard_selection_t *gs,
 
   guard->is_reachable = GUARD_REACHABLE_YES;
   guard->failing_since = 0;
+  guard->consecutive_failures = 0;
+  guard->last_failure_at = 0;
+  guard->last_successful_use = approx_time();
   guard->is_pending = 0;
   if (guard->is_filtered_guard)
     guard->is_usable_filtered_guard = 1;
@@ -3004,6 +3086,12 @@ entry_guard_encode_for_state(entry_guard_t *guard, int dense_sampled_idx)
     smartlist_add_asprintf(result, "confirmed_idx=%d", guard->confirmed_idx);
   }
 
+  if (guard->last_successful_use > 0) {
+    format_iso_time_nospace(tbuf, guard->last_successful_use);
+    smartlist_add_asprintf(result,
+                           "last_successful_use=%s", tbuf);
+  }
+
   const double EPSILON = 1.0e-6;
 
   /* Make a copy of the pathbias object, since we will want to update
@@ -3132,6 +3220,7 @@ entry_guard_parse_from_state(const char *s)
   char *listed  = NULL;
   char *confirmed_on = NULL;
   char *confirmed_idx = NULL;
+  char *last_successful_use = NULL;
   char *bridge_addr = NULL;
 
   // pathbias
@@ -3163,6 +3252,7 @@ entry_guard_parse_from_state(const char *s)
     FIELD(listed);
     FIELD(confirmed_on);
     FIELD(confirmed_idx);
+    FIELD(last_successful_use);
     FIELD(bridge_addr);
     FIELD(pb_use_attempts);
     FIELD(pb_use_successes);
@@ -3224,6 +3314,17 @@ entry_guard_parse_from_state(const char *s)
   /* Process the various time fields. */
   parse_from_state_handle_time(guard, sampled_on, unlisted_since,
       confirmed_on);
+
+  if (last_successful_use) {
+    time_t t = 0;
+    if (parse_iso_time_nospace(last_successful_use, &t) < 0) {
+      log_warn(LD_CIRC,
+               "Unable to parse last_successful_use %s",
+               escaped(last_successful_use));
+    } else {
+      guard->last_successful_use = t;
+    }
+  }
 
   /* Take sampled_by_version verbatim. */
   guard->sampled_by_version = sampled_by;
@@ -3322,6 +3423,7 @@ entry_guard_parse_from_state(const char *s)
   tor_free(listed);
   tor_free(confirmed_on);
   tor_free(confirmed_idx);
+  tor_free(last_successful_use);
   tor_free(sampled_idx);
   tor_free(bridge_addr);
   tor_free(pb_use_attempts);

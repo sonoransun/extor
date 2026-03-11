@@ -3389,6 +3389,13 @@ append_cell_to_circuit_queue(circuit_t *circ, channel_t *chan,
       dos_note_circ_max_outq(CONST_TO_OR_CIRCUIT(circ)->p_chan);
     }
 
+    /* Track inbound (non-exitward) queue overflows as well so we can
+     * detect clients flooding cells toward the network. */
+    if (!exitward && CIRCUIT_IS_ORCIRC(circ)) {
+      dos_note_circ_max_inq(
+        CONST_TO_OR_CIRCUIT(circ)->p_chan);
+    }
+
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "%s circuit has %d cells in its queue, maximum allowed is %d. "
            "Closing circuit for safety reasons.",

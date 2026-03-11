@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tor GUI</title>
+  <link rel="stylesheet" href="/css/tor-gui.css">
+  <link rel="stylesheet" href="/css/theme-dark.css">
+</head>
+<body>
+  <div id="app">
+    <nav id="sidebar">
+      <div class="sidebar-header">
+        <h1>Tor</h1>
+        <span id="tor-version" class="version-badge"></span>
+      </div>
+      <ul class="nav-list">
+        <li><a href="#dashboard" class="nav-link active" data-page="dashboard">Dashboard</a></li>
+        <li><a href="#bridges" class="nav-link" data-page="bridges">Bridges</a></li>
+        <li><a href="#transports" class="nav-link" data-page="transports">Transports</a></li>
+        <li><a href="#config" class="nav-link" data-page="config">Configuration</a></li>
+        <li><a href="#network" class="nav-link" data-page="network">Network Globe</a></li>
+        <li><a href="#circuits" class="nav-link" data-page="circuits">Circuits</a></li>
+        <li><a href="#onion" class="nav-link" data-page="onion">Onion Services</a></li>
+        <li><a href="#logs" class="nav-link" data-page="logs">Logs</a></li>
+        <li><a href="#qr" class="nav-link" data-page="qr">QR Codes</a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div id="connection-status" class="status-indicator disconnected">
+          <span class="status-dot"></span>
+          <span class="status-text">Disconnected</span>
+        </div>
+      </div>
+    </nav>
+    <main id="content">
+      <div id="page-dashboard" class="page active"></div>
+      <div id="page-bridges" class="page"></div>
+      <div id="page-transports" class="page"></div>
+      <div id="page-config" class="page"></div>
+      <div id="page-network" class="page"></div>
+      <div id="page-circuits" class="page"></div>
+      <div id="page-onion" class="page"></div>
+      <div id="page-logs" class="page"></div>
+      <div id="page-qr" class="page"></div>
+    </main>
+  </div>
+
+  <script src="/lib/three.min.js"></script>
+  <script src="/lib/jsqr.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/ws.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/bridge-manager.js"></script>
+  <script src="/js/transport-setup.js"></script>
+  <script src="/js/config-editor.js"></script>
+  <script src="/js/network-globe.js"></script>
+  <script src="/js/circuit-view.js"></script>
+  <script src="/js/qr-panel.js"></script>
+  <script src="/js/log-viewer.js"></script>
+  <script src="/js/onion-services.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

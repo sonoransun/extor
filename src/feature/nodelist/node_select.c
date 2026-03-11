@@ -34,6 +34,7 @@
 #include "lib/container/bitarray.h"
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/math/fp.h"
+#include "lib/geoip/geoip.h"
 
 #include "feature/dirclient/dir_server_st.h"
 #include "feature/nodelist/networkstatus_st.h"
@@ -1204,4 +1205,116 @@ router_pick_trusteddirserver_impl(const smartlist_t *sourcelist,
   if (n_busy_out)
     *n_busy_out = n_busy;
   return result;
+}
+
+/** Number of broad geographic regions for diversity tracking. */
+#define NUM_GEOIP_REGIONS 4
+/** Region indices: 0=Americas, 1=Europe, 2=Asia-Pacific,
+ * 3=Other/Unknown */
+
+/**
+ * Classify a 2-letter country code into a broad geographic
+ * region. Returns 0-3.
+ */
+static int
+geoip_country_to_region(const char *cc)
+{
+  if (!cc || strlen(cc) < 2)
+    return 3;
+  /* Americas */
+  if (!strcmp(cc,"US") || !strcmp(cc,"CA") ||
+      !strcmp(cc,"MX") || !strcmp(cc,"BR") ||
+      !strcmp(cc,"AR") || !strcmp(cc,"CL") ||
+      !strcmp(cc,"CO") || !strcmp(cc,"VE") ||
+      !strcmp(cc,"PE") || !strcmp(cc,"EC"))
+    return 0;
+  /* Europe */
+  if (!strcmp(cc,"DE") || !strcmp(cc,"FR") ||
+      !strcmp(cc,"GB") || !strcmp(cc,"NL") ||
+      !strcmp(cc,"SE") || !strcmp(cc,"CH") ||
+      !strcmp(cc,"AT") || !strcmp(cc,"FI") ||
+      !strcmp(cc,"NO") || !strcmp(cc,"DK") ||
+      !strcmp(cc,"BE") || !strcmp(cc,"IT") ||
+      !strcmp(cc,"ES") || !strcmp(cc,"PT") ||
+      !strcmp(cc,"PL") || !strcmp(cc,"CZ") ||
+      !strcmp(cc,"RO") || !strcmp(cc,"BG") ||
+      !strcmp(cc,"LU") || !strcmp(cc,"IE") ||
+      !strcmp(cc,"IS") || !strcmp(cc,"LT") ||
+      !strcmp(cc,"LV") || !strcmp(cc,"EE") ||
+      !strcmp(cc,"SK") || !strcmp(cc,"SI") ||
+      !strcmp(cc,"HR") || !strcmp(cc,"HU") ||
+      !strcmp(cc,"UA") || !strcmp(cc,"RU"))
+    return 1;
+  /* Asia-Pacific */
+  if (!strcmp(cc,"JP") || !strcmp(cc,"KR") ||
+      !strcmp(cc,"AU") || !strcmp(cc,"NZ") ||
+      !strcmp(cc,"SG") || !strcmp(cc,"HK") ||
+      !strcmp(cc,"TW") || !strcmp(cc,"IN") ||
+      !strcmp(cc,"ID") || !strcmp(cc,"TH") ||
+      !strcmp(cc,"MY") || !strcmp(cc,"PH"))
+    return 2;
+  return 3;
+}
+
+/**
+ * Adjust fallback directory weights to promote geographic
+ * diversity. Boosts weights of fallbacks in underrepresented
+ * regions so that weight-based random selection achieves
+ * approximate diversity.
+ *
+ * Uses floating-point for weight scaling; precision loss is
+ * negligible for the small multiplier (2x) applied here.
+ */
+void
+fallback_dirs_adjust_weights_for_geodiversity(void)
+{
+  smartlist_t *servers;
+  int counts[NUM_GEOIP_REGIONS] = {0};
+  int n_fallbacks;
+  double fair_share;
+
+  if (!geoip_is_loaded(AF_INET))
+    return;
+
+  servers = router_get_fallback_dir_servers_mutable();
+  if (!servers || smartlist_len(servers) == 0)
+    return;
+
+  n_fallbacks = smartlist_len(servers);
+  if (n_fallbacks < NUM_GEOIP_REGIONS)
+    return;
+
+  /* Count fallbacks per region. */
+  SMARTLIST_FOREACH_BEGIN(servers, dir_server_t *, ds) {
+    int country, region;
+    const char *cc;
+    country = geoip_get_country_by_addr(&ds->ipv4_addr);
+    cc = (country >= 0) ?
+      geoip_get_country_name(country) : "??";
+    region = geoip_country_to_region(cc);
+    counts[region]++;
+  } SMARTLIST_FOREACH_END(ds);
+
+  fair_share = (double)n_fallbacks / NUM_GEOIP_REGIONS;
+
+  /* Boost weights for underrepresented regions. */
+  SMARTLIST_FOREACH_BEGIN(servers, dir_server_t *, ds) {
+    int country, region;
+    const char *cc;
+    country = geoip_get_country_by_addr(&ds->ipv4_addr);
+    cc = (country >= 0) ?
+      geoip_get_country_name(country) : "??";
+    region = geoip_country_to_region(cc);
+    if (counts[region] > 0 &&
+        (double)counts[region] < fair_share) {
+      ds->weight *= 2;
+    }
+  } SMARTLIST_FOREACH_END(ds);
+
+  log_info(LD_DIR,
+           "Fallback geographic diversity: "
+           "Americas=%d Europe=%d Asia-Pacific=%d "
+           "Other=%d (total %d)",
+           counts[0], counts[1], counts[2], counts[3],
+           n_fallbacks);
 }

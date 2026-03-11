@@ -132,6 +132,19 @@ static void assert_resolve_ok(cached_resolve_t *resolve);
 /** Hash table of cached_resolve objects. */
 static HT_HEAD(cache_map, cached_resolve_t) cache_root;
 
+/** EWMA of DNS resolution latency in milliseconds. Uses
+ * floating-point for smooth averaging; precision loss is
+ * negligible for latency tracking purposes. */
+static double dns_resolve_ewma_ms = 1000.0;
+/** Alpha for EWMA smoothing (0.1 = ~10-sample window). */
+#define DNS_EWMA_ALPHA 0.1
+/** Minimum adaptive DNS timeout in milliseconds. */
+#define DNS_ADAPTIVE_TIMEOUT_MIN_MS 1000
+/** Maximum adaptive DNS timeout in milliseconds. */
+#define DNS_ADAPTIVE_TIMEOUT_MAX_MS 30000
+/** Multiplier applied to EWMA for timeout. */
+#define DNS_TIMEOUT_MULTIPLIER 3.0
+
 /** Global: how many IPv6 requests have we made in all? */
 static uint64_t n_ipv6_requests_made = 0;
 /** Global: how many IPv6 requests have timed out? */
@@ -1178,6 +1191,20 @@ dns_found_answer(const char *address, uint8_t query_type,
     return;
   }
 
+  /* Update DNS resolve latency EWMA. */
+  if (resolve->resolve_started_stamp != 0) {
+    uint32_t now_stamp = monotime_coarse_get_stamp();
+    uint32_t elapsed = now_stamp - resolve->resolve_started_stamp;
+    uint64_t elapsed_ms =
+      monotime_coarse_stamp_units_to_approx_msec(
+        (uint64_t)elapsed);
+    if (elapsed_ms > 0 && elapsed_ms < 120000) {
+      dns_resolve_ewma_ms =
+        DNS_EWMA_ALPHA * (double)elapsed_ms +
+        (1.0 - DNS_EWMA_ALPHA) * dns_resolve_ewma_ms;
+    }
+  }
+
   cached_resolve_add_answer(resolve, query_type, dns_answer,
                             addr, hostname, ttl);
 
@@ -1513,6 +1540,9 @@ configure_nameservers(int force)
 #endif
   flags = DNS_OPTIONS_ALL;
 
+  if (force)
+    dns_resolve_ewma_ms = 1000.0; /* Reset to default */
+
   if (!the_evdns_base) {
     if (!(the_evdns_base = evdns_base_new(tor_libevent_get_base(), 0))) {
       log_err(LD_BUG, "Couldn't create an evdns_base");
@@ -1828,6 +1858,8 @@ launch_resolve,(cached_resolve_t *resolve))
       return -1;
     }
   }
+
+  resolve->resolve_started_stamp = monotime_coarse_get_stamp();
 
   r = tor_addr_parse_PTR_name(
                             &a, resolve->address, AF_UNSPEC, 0);
@@ -2312,6 +2344,21 @@ assert_cache_ok_(void)
 }
 
 #endif /* defined(DEBUG_DNS_CACHE) */
+
+/** Return the adaptive DNS timeout in seconds, based on
+ * observed resolution latency. Uses floating-point for the
+ * EWMA multiplier; precision is adequate for timeout values. */
+int
+dns_get_adaptive_timeout_secs(void)
+{
+  int timeout_ms = (int)(dns_resolve_ewma_ms *
+                         DNS_TIMEOUT_MULTIPLIER);
+  if (timeout_ms < DNS_ADAPTIVE_TIMEOUT_MIN_MS)
+    timeout_ms = DNS_ADAPTIVE_TIMEOUT_MIN_MS;
+  if (timeout_ms > DNS_ADAPTIVE_TIMEOUT_MAX_MS)
+    timeout_ms = DNS_ADAPTIVE_TIMEOUT_MAX_MS;
+  return (timeout_ms + 999) / 1000; /* ceil to seconds */
+}
 
 cached_resolve_t *
 dns_get_cache_entry(cached_resolve_t *query)

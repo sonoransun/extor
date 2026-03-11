@@ -1572,6 +1572,34 @@ connection_listener_new(const struct sockaddr *listensockaddr,
         if (addr_in_use)
           *addr_in_use = 1;
       }
+#ifdef _WIN32
+      else if (e == WSAEACCES) {
+        helpfulhint = ". Ports below 1024 require "
+                      "administrator privileges.";
+      } else if (e == WSAEADDRNOTAVAIL) {
+        helpfulhint = ". This address is not available "
+                      "on any local interface.";
+      }
+#else
+      else if (e == EACCES || e == EPERM) {
+        helpfulhint = ". Ports below 1024 require "
+                      "root privileges.";
+      } else if (e == EADDRNOTAVAIL) {
+        helpfulhint = ". This address is not available "
+                      "on any local interface.";
+      }
+#endif
+      /* IPv6-specific guidance */
+      if (listensockaddr->sa_family == AF_INET6 &&
+          !*helpfulhint &&
+          (e == SOCK_ERRNO(EAFNOSUPPORT)
+#ifdef EADDRNOTAVAIL
+           || e == SOCK_ERRNO(EADDRNOTAVAIL)
+#endif
+           )) {
+        helpfulhint = ". IPv6 may not be supported or "
+                      "configured on this system.";
+      }
       log_warn(LD_NET, "Could not bind to %s:%u: %s%s", address, usePort,
                tor_socket_strerror(e), helpfulhint);
       goto err;
@@ -5522,6 +5550,72 @@ connection_is_moribund(connection_t *conn)
   }
 }
 
+/** Proactive soft OOS cleanup. When open sockets approach
+ * the configured limit (85%), close idle OR connections
+ * with zero circuits to prevent hitting the hard limit. */
+void
+connection_check_soft_oos(int n_socks)
+{
+  const or_options_t *options = get_options();
+  int soft_thresh, to_close, closed;
+  smartlist_t *conns, *idle;
+
+  if (options->DisableOOSCheck)
+    return;
+
+  soft_thresh = options->ConnLimit_soft_thresh;
+  if (soft_thresh <= 0 || n_socks < soft_thresh)
+    return;
+
+  /* Rate-limited warning */
+  {
+    static ratelim_t soft_rl = RATELIM_INIT(600);
+    char *m;
+    if ((m = rate_limit_log(&soft_rl, approx_time()))) {
+      log_warn(LD_NET,
+               "Approaching fd limit: %d open sockets, "
+               "soft threshold %d. Proactively closing "
+               "idle connections.%s",
+               n_socks, soft_thresh, m);
+      tor_free(m);
+    }
+  }
+
+  conns = get_connection_array();
+  idle = smartlist_new();
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
+    if (c->type != CONN_TYPE_OR)
+      continue;
+    if (c->marked_for_close)
+      continue;
+    if (!connection_state_is_open(c))
+      continue;
+    or_connection_t *or_c = TO_OR_CONN(c);
+    if (connection_or_get_num_circuits(or_c) == 0)
+      smartlist_add(idle, c);
+  } SMARTLIST_FOREACH_END(c);
+
+  to_close = n_socks - soft_thresh;
+  closed = 0;
+  SMARTLIST_FOREACH_BEGIN(idle, connection_t *, c) {
+    if (closed >= to_close)
+      break;
+    log_info(LD_NET,
+             "Soft OOS: closing idle OR connection "
+             "to %s.",
+             connection_describe(c));
+    connection_or_close_normally(TO_OR_CONN(c), 0);
+    closed++;
+  } SMARTLIST_FOREACH_END(c);
+
+  if (closed > 0) {
+    log_info(LD_NET,
+             "Soft OOS: proactively closed %d idle "
+             "OR connections.", closed);
+  }
+  smartlist_free(idle);
+}
+
 /** Out-of-Sockets handler; n_socks is the current number of open
  * sockets, and failed is non-zero if a socket exhaustion related
  * error immediately preceded this call.  This is where to do
@@ -5548,6 +5642,9 @@ connection_check_oos(int n_socks, int failed)
   log_debug(LD_NET,
             "Running the OOS handler (%d open sockets, %s)",
             n_socks, (failed != 0) ? "exhaustion seen" : "no exhaustion");
+
+  /* Proactive cleanup at soft watermark (85%) */
+  connection_check_soft_oos(n_socks);
 
   /*
    * Check if we're really handling an OOS condition, and if so decide how

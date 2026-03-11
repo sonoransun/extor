@@ -174,6 +174,12 @@ crypto_postfork(void)
 #ifdef ENABLE_NSS
   crypto_nss_postfork();
 #endif
+  /* Reseed the RNG after fork to ensure the child process
+   * does not share PRNG state with the parent. */
+  if (crypto_seed_rng() < 0) {
+    log_err(LD_CRYPTO,
+            "Failed to reseed RNG after fork.");
+  }
 }
 
 /** Return the name of the crypto library we're using. */
