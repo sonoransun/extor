@@ -38,6 +38,8 @@
 #include "app/config/or_state_st.h"
 #include "feature/nodelist/routerinfo_st.h"
 #include "lib/tls/tortls.h"
+#include "feature/relay/onion_queue.h"
+#include "core/or/onion.h"
 
 static void log_accounting(const time_t now, const or_options_t *options);
 
@@ -257,6 +259,13 @@ log_heartbeat(time_t now)
     rep_hist_log_link_protocol_counts();
     dos_log_heartbeat();
     channelpadding_log_heartbeat();
+
+    int ntor_pending = onion_num_pending(ONION_HANDSHAKE_TYPE_NTOR);
+    if (ntor_pending > 0) {
+      log_fn(LOG_NOTICE, LD_HEARTBEAT,
+             "Onion handshake queue: %d ntor pending.",
+             ntor_pending);
+    }
   }
 
   circuit_log_ancient_one_hop_circuits(1800);

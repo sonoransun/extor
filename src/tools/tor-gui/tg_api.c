@@ -21,6 +21,69 @@
 #include "tg_config.h"
 #include "tg_qr.h"
 
+/* Country centroid coordinates for globe visualization */
+static const struct {
+    const char *code;
+    double lat;
+    double lng;
+} country_centroids[] = {
+    {"US", 39.8, -98.5}, {"DE", 51.2, 10.4}, {"FR", 46.6, 2.2},
+    {"GB", 53.5, -2.4}, {"NL", 52.1, 5.3}, {"CA", 56.1, -106.3},
+    {"SE", 60.1, 18.6}, {"CH", 46.8, 8.2}, {"AT", 47.5, 14.6},
+    {"RO", 45.9, 24.9}, {"FI", 61.9, 25.7}, {"NO", 60.5, 8.5},
+    {"RU", 61.5, 105.3}, {"JP", 36.2, 138.3}, {"AU", -25.3, 133.8},
+    {"BR", -14.2, -51.9}, {"IN", 20.6, 79.0}, {"CN", 35.9, 104.2},
+    {"SG", 1.4, 103.8}, {"KR", 35.9, 127.8}, {"IT", 41.9, 12.6},
+    {"ES", 40.5, -3.7}, {"PL", 51.9, 19.1}, {"CZ", 49.8, 15.5},
+    {"UA", 48.4, 31.2}, {"HU", 47.2, 19.5}, {"BG", 42.7, 25.5},
+    {"IS", 64.9, -19.0}, {"LU", 49.8, 6.1}, {"IE", 53.4, -8.2},
+    {"DK", 56.3, 9.5}, {"LT", 55.2, 23.9}, {"LV", 56.9, 24.1},
+    {"EE", 58.6, 25.0}, {"GR", 39.1, 21.8}, {"PT", 39.4, -8.2},
+    {"BE", 50.5, 4.5}, {"HR", 45.1, 15.2}, {"RS", 44.0, 21.0},
+    {"SK", 48.7, 19.7}, {"SI", 46.2, 14.8}, {"MD", 47.4, 28.4},
+    {"ZA", -30.6, 22.9}, {"IL", 31.0, 34.9}, {"TW", 23.7, 121.0},
+    {"HK", 22.4, 114.1}, {"NZ", -40.9, 174.9}, {"MX", 23.6, -102.6},
+    {"AR", -38.4, -63.6}, {"CL", -35.7, -71.5}, {"CO", 4.6, -74.3},
+    {"TH", 15.9, 100.5}, {"PH", 12.9, 121.8}, {"MY", 4.2, 101.9},
+    {"ID", -0.8, 113.9}, {"VN", 14.1, 108.3}, {"TR", 39.0, 35.2},
+    {"EG", 26.8, 30.8}, {"NG", 9.1, 8.7}, {"KE", -0.0, 37.9},
+    {"GH", 7.9, -1.0}, {"PE", -9.2, -75.0}, {"VE", 6.4, -66.6},
+    {"UY", -32.5, -55.8}, {"PY", -23.4, -58.4}, {"EC", -1.8, -78.2},
+    {"BO", -16.3, -63.6}, {"PA", 8.5, -80.8}, {"CR", 10.0, -84.2},
+    {"CU", 21.5, -77.8}, {"DO", 18.7, -70.2}, {"GT", 15.8, -90.2},
+    {"HN", 15.2, -86.2}, {"SV", 13.8, -88.9}, {"NI", 12.9, -85.2},
+    {"JM", 18.1, -77.3}, {"TT", 10.7, -61.2}, {"BA", 43.9, 17.7},
+    {"AL", 41.2, 20.2}, {"MK", 41.5, 21.7}, {"ME", 42.7, 19.4},
+    {"XK", 42.6, 20.9}, {"CY", 35.1, 33.4}, {"MT", 35.9, 14.4},
+    {"LI", 47.2, 9.6}, {"MC", 43.7, 7.4}, {"AD", 42.5, 1.6},
+    {"SM", 43.9, 12.5}, {"VA", 41.9, 12.5}, {"GE", 42.3, 43.4},
+    {"AM", 40.1, 44.5}, {"AZ", 40.1, 47.6}, {"KZ", 48.0, 68.0},
+    {"UZ", 41.4, 64.6}, {"PK", 30.4, 69.3}, {"BD", 23.7, 90.4},
+    {"LK", 7.9, 80.8}, {"NP", 28.4, 84.1}, {"MM", 21.9, 95.9},
+    {"KH", 12.6, 105.0}, {"LA", 19.9, 102.5},
+    {NULL, 0, 0}
+};
+
+/** Look up country centroid. Returns 1 if found, 0 otherwise. */
+static int
+lookup_country_centroid(const char *code, double *lat, double *lng)
+{
+    if (!code || !code[0])
+        return 0;
+    char up[3] = { 0 };
+    up[0] = (code[0] >= 'a' && code[0] <= 'z') ? code[0] - 32 : code[0];
+    up[1] = (code[1] >= 'a' && code[1] <= 'z') ? code[1] - 32 : code[1];
+    for (int i = 0; country_centroids[i].code; i++) {
+        if (up[0] == country_centroids[i].code[0] &&
+            up[1] == country_centroids[i].code[1]) {
+            *lat = country_centroids[i].lat;
+            *lng = country_centroids[i].lng;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* ---------------- Helpers ---------------- */
 
 /** Send a JSON error response. */
@@ -201,14 +264,91 @@ api_get_circuits(struct mg_connection *c, struct tg_http *http)
       if (purpose[0])
         tg_json_kv_str(&j, "purpose", purpose);
 
-      /* Parse path into array */
+      /* Parse path into array of relay objects */
       tg_json_key(&j, "path");
       tg_json_arr_open(&j);
       if (n >= 3 && path_buf[0] == '$') {
         char *relay_save = NULL;
         char *relay = strtok_r(path_buf, ",", &relay_save);
         while (relay) {
-          tg_json_str(&j, relay);
+          tg_json_obj_open(&j);
+
+          /* Extract fingerprint and nickname from $FINGERPRINT~nickname */
+          const char *fp_start = (*relay == '$') ? relay + 1 : relay;
+          char fingerprint[42] = "";
+          char nickname[64] = "";
+          const char *tilde = strchr(fp_start, '~');
+          if (tilde) {
+            size_t fp_len = (size_t)(tilde - fp_start);
+            if (fp_len > sizeof(fingerprint) - 1)
+              fp_len = sizeof(fingerprint) - 1;
+            memcpy(fingerprint, fp_start, fp_len);
+            fingerprint[fp_len] = '\0';
+            snprintf(nickname, sizeof(nickname), "%s", tilde + 1);
+            /* Strip trailing whitespace from nickname */
+            size_t nlen = strlen(nickname);
+            while (nlen > 0 &&
+                   (nickname[nlen-1] == ' ' || nickname[nlen-1] == '\r'))
+              nickname[--nlen] = '\0';
+          } else {
+            snprintf(fingerprint, sizeof(fingerprint), "%.41s", fp_start);
+          }
+
+          tg_json_kv_str(&j, "fingerprint", fingerprint);
+          tg_json_kv_str(&j, "nickname", nickname);
+
+          /* Look up relay IP from network status */
+          char ns_key[100];
+          snprintf(ns_key, sizeof(ns_key), "ns/id/%s", fingerprint);
+          char *ns_data = tg_ctrl_getinfo(http->ctrl, ns_key);
+
+          char relay_ip[64] = "";
+          if (ns_data && *ns_data) {
+            /* Parse first line: r name id digest date time IP ORPort
+             * DirPort
+             * Format: r nick IDENTITY DIGEST YYYY-MM-DD HH:MM:SS
+             *         IP PORT PORT */
+            char *ns_line = ns_data;
+            if (*ns_line == 'r' && ns_line[1] == ' ') {
+              /* Skip: r, nickname, identity, digest = 4 fields,
+               * then date, time = 2 fields, then IP */
+              int field = 0;
+              char *p = ns_line + 2; /* skip "r " */
+              while (*p && field < 5) {
+                while (*p && *p != ' ') p++;
+                while (*p == ' ') p++;
+                field++;
+              }
+              /* p now points to the IP field */
+              if (*p) {
+                char *end = p;
+                while (*end && *end != ' ' &&
+                       *end != '\n' && *end != '\r')
+                  end++;
+                size_t ip_len = (size_t)(end - p);
+                if (ip_len > 0 && ip_len < sizeof(relay_ip)) {
+                  memcpy(relay_ip, p, ip_len);
+                  relay_ip[ip_len] = '\0';
+                }
+              }
+            }
+          }
+          free(ns_data);
+
+          if (relay_ip[0]) {
+            tg_json_kv_str(&j, "ip", relay_ip);
+
+            /* Look up country */
+            char geo_key[300];
+            snprintf(geo_key, sizeof(geo_key),
+                     "ip-to-country/%s", relay_ip);
+            char *country = tg_ctrl_getinfo(http->ctrl, geo_key);
+            if (country && *country)
+              tg_json_kv_str(&j, "country", country);
+            free(country);
+          }
+
+          tg_json_obj_close(&j);
           relay = strtok_r(NULL, ",", &relay_save);
         }
       }
@@ -934,6 +1074,14 @@ api_get_geoip(struct mg_connection *c, struct tg_http *http,
   tg_json_obj_open(&j);
   tg_json_kv_str(&j, "ip", ip_addr);
   tg_json_kv_str(&j, "country", country ? country : "??");
+
+  /* Add lat/lng from centroid table */
+  double lat, lng;
+  if (country && lookup_country_centroid(country, &lat, &lng)) {
+    tg_json_kv_double(&j, "latitude", lat);
+    tg_json_kv_double(&j, "longitude", lng);
+  }
+
   tg_json_obj_close(&j);
 
   mg_http_reply(c, 200, "Content-Type: application/json\r\n",

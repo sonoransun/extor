@@ -120,6 +120,8 @@ var CircuitView = {
       if (i === 0) { role = 'Guard'; roleColor = 'var(--accent-green)'; }
       else if (i === normalizedHops.length - 1) { role = 'Exit'; roleColor = 'var(--accent-red)'; }
 
+      var country = hop.country || '';
+
       hopsHtml += '<div style="display:flex;align-items:center;gap:8px;' +
         'padding:4px 0;font-size:12px">' +
         '<span style="width:8px;height:8px;border-radius:50%;background:' +
@@ -130,7 +132,26 @@ var CircuitView = {
         '</span>' +
         (ip ? '<span class="mono" style="color:var(--text-muted)">' +
           this._esc(ip) + '</span>' : '') +
-      '</div>';
+        (country ? '<span style="color:var(--text-muted);font-size:10px">' +
+          this._esc(country) + '</span>' : '');
+
+      /* Exclude buttons: by relay and by country */
+      if (fingerprint && typeof RelayExclude !== 'undefined') {
+        hopsHtml +=
+          '<button class="btn btn-danger btn-sm" style="padding:1px 6px;' +
+            'font-size:10px;margin-left:auto" onclick="RelayExclude' +
+            '.excludeRelayFromCircuit(\'' + this._esc(fingerprint) + '\',\'' +
+            this._esc(name) + '\')" title="Exclude this relay">Exclude</button>';
+      }
+      if (country && typeof RelayExclude !== 'undefined') {
+        hopsHtml +=
+          '<button class="btn btn-secondary btn-sm" style="padding:1px 6px;' +
+            'font-size:10px" onclick="RelayExclude.excludeCountry(\'' +
+            this._esc(country) + '\')" title="Exclude all relays in ' +
+            this._esc(country) + '">Ban ' + this._esc(country) + '</button>';
+      }
+
+      hopsHtml += '</div>';
     }
 
     return '<div class="card" style="margin-bottom:12px">' +

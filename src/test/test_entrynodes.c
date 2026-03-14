@@ -1638,20 +1638,26 @@ test_entry_guard_retry_unreachable(void *arg)
   tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
 
   g1->is_reachable = GUARD_REACHABLE_NO;
-  g1->last_tried_to_connect = start + 55*60;
+  /* Set g1's last attempt close enough that it won't be retried
+   * at the nonprimary check time (primary delay=10 min, max jitter
+   * +20% = 12 min, so set last_tried 5 min before check). */
+  g1->last_tried_to_connect = start + 70*60;
 
-  /* After 1 hour, we'll retry the nonprimary one. */
-  update_approx_time(start + 61 * 60);
+  /* After well over 1 hour (accounting for +-20% retry jitter),
+   * we'll retry the nonprimary one. Base delay = 60 min,
+   * max jitter = +20% = 72 min, so check at 75 min. */
+  update_approx_time(start + 75 * 60);
   entry_guard_consider_retry(g1);
   entry_guard_consider_retry(g2);
   tt_int_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_NO);
   tt_int_op(g2->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);
 
   g2->is_reachable = GUARD_REACHABLE_NO;
-  g2->last_tried_to_connect = start + 61*60;
+  g2->last_tried_to_connect = start + 75*60;
 
-  /* And then the primary one again. */
-  update_approx_time(start + 66 * 60);
+  /* And then the primary one again (base delay 10 min,
+   * +20% jitter = 12 min max, so check at 15 min after). */
+  update_approx_time(start + 75*60 + 15*60);
   entry_guard_consider_retry(g1);
   entry_guard_consider_retry(g2);
   tt_int_op(g1->is_reachable, OP_EQ, GUARD_REACHABLE_MAYBE);

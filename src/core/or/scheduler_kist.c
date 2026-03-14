@@ -101,6 +101,8 @@ static monotime_t scheduler_last_run;
 static double sock_buf_size_factor = 1.0;
 /* How often the scheduler runs. */
 STATIC int sched_run_interval = KIST_SCHED_RUN_INTERVAL_DEFAULT;
+/* How many cells to flush per channel per scheduler iteration. */
+static int kist_cells_per_chan = KIST_SCHED_CELLS_PER_CHAN_DEFAULT;
 
 #ifdef HAVE_KIST_SUPPORT
 /* Indicate if KIST lite mode is on or off. We can disable it at runtime.
@@ -383,6 +385,18 @@ set_scheduler_run_interval(void)
                        "from %" PRId32 " to %" PRId32,
              old_sched_run_interval, sched_run_interval);
   }
+
+  int old_cells = kist_cells_per_chan;
+  kist_cells_per_chan = networkstatus_get_param(NULL,
+    "KISTSchedCellsPerChan",
+    KIST_SCHED_CELLS_PER_CHAN_DEFAULT,
+    KIST_SCHED_CELLS_PER_CHAN_MIN,
+    KIST_SCHED_CELLS_PER_CHAN_MAX);
+  if (old_cells != kist_cells_per_chan) {
+    log_info(LD_SCHED, "Scheduler KIST cells-per-channel changed "
+                       "from %d to %d",
+             old_cells, kist_cells_per_chan);
+  }
 }
 
 /* Return true iff the channel hasn't hit its kist-imposed write limit yet */
@@ -649,7 +663,7 @@ kist_scheduler_run(void)
     /* Only flush and write if the per-socket limit hasn't been hit */
     if (socket_can_write(&socket_table, chan)) {
       /* flush to channel queue/outbuf */
-      flush_result = (int)channel_flush_some_cells(chan, 1); // 1 for num cells
+      flush_result = (int)channel_flush_some_cells(chan, kist_cells_per_chan);
       /* XXX: While flushing cells, it is possible that the connection write
        * fails leading to the channel to be closed which triggers a release
        * and free its entry in the socket table. And because of a engineering

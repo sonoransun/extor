@@ -16,6 +16,7 @@ var App = {
     ConfigEditor.init();
     NetworkGlobe.init();
     CircuitView.init();
+    RelayExclude.init();
     QrPanel.init();
     LogViewer.init();
     OnionServices.init();
@@ -66,12 +67,18 @@ var App = {
     var link = document.querySelector('[data-page="' + name + '"]');
     if (page) page.classList.add('active');
     if (link) link.classList.add('active');
+    var prevPage = this.currentPage;
     this.currentPage = name;
 
-    /* Notify page of activation for lazy-loading (e.g. 3D globe) */
-    if (name === 'network' && typeof NetworkGlobe !== 'undefined' &&
-        NetworkGlobe.onShow) {
-      NetworkGlobe.onShow();
+    /* Notify globe page of show/hide for lazy-loading and animation control */
+    if (typeof NetworkGlobe !== 'undefined') {
+      if (prevPage === 'network' && name !== 'network' &&
+          NetworkGlobe.onHide) {
+        NetworkGlobe.onHide();
+      }
+      if (name === 'network' && NetworkGlobe.onShow) {
+        NetworkGlobe.onShow();
+      }
     }
   },
 

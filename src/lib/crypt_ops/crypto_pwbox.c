@@ -50,9 +50,17 @@ crypto_pwbox(uint8_t **out, size_t *outlen_out,
              unsigned s2k_flags)
 {
   uint8_t *result = NULL, *encrypted_portion;
-  size_t encrypted_len = 128 * CEIL_DIV(input_len+4, 128);
+  size_t encrypted_len;
   ssize_t result_len;
   int spec_len;
+
+  /* Guard against integer overflow: if input_len is near SIZE_MAX,
+   * input_len+4 wraps and CEIL_DIV produces a small value, leading
+   * to a heap buffer overflow when encrypting. */
+  if (input_len > SIZE_MAX - 4 - 128) {
+    return -1;
+  }
+  encrypted_len = 128 * CEIL_DIV(input_len+4, 128);
   uint8_t keys[CIPHER_KEY_LEN + DIGEST256_LEN];
   pwbox_encoded_t *enc = NULL;
   ssize_t enc_len;

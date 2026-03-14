@@ -34,6 +34,7 @@
 #include "core/or/connection_or.h"
 #include "core/or/relay.h"
 #include "core/or/status.h"
+#include "core/or/throughput_metrics.h"
 #include "feature/api/tor_api.h"
 #include "feature/api/tor_api_internal.h"
 #include "feature/client/addressmap.h"
@@ -244,11 +245,15 @@ process_signal(int sig)
       log_debug(LD_GENERAL,"Caught SIGPIPE. Ignoring.");
       break;
 #endif
-    case SIGUSR1:
+    case SIGUSR1: {
       /* prefer to log it at INFO, but make sure we always see it */
-      dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
+      int sig_severity = get_min_log_level() < LOG_INFO ?
+                         get_min_log_level() : LOG_INFO;
+      dumpstats(sig_severity);
+      dump_throughput_metrics(sig_severity);
       control_event_signal(sig);
       break;
+    }
     case SIGUSR2:
       switch_logs_debug();
       log_debug(LD_GENERAL,"Caught USR2, going to loglevel debug. "

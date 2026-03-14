@@ -367,7 +367,7 @@ test_status_hb_not_in_consensus(void *arg)
                  "[DoSRefuseSingleHopClientRendezvous disabled], "
                  "[DoSStreamCreationEnabled disabled], "
                  "0 INTRODUCE2 rejected.\n");
-  tt_int_op(mock_saved_log_n_entries(), OP_EQ, 6);
+  tt_int_op(mock_saved_log_n_entries(), OP_EQ, 7);
 
  done:
     teardown_capture_of_logs();
@@ -597,7 +597,7 @@ test_status_hb_calls_log_accounting(void *arg)
   expect_log_msg_containing("Heartbeat: Accounting enabled. Sent: 0 kB, "
                             "Received: 0 kB, Used: 0 kB / 0 kB, Rule: max. "
                             "The current accounting interval ends on ");
-  tt_int_op(mock_saved_log_n_entries(), OP_EQ, 2);
+  tt_int_op(mock_saved_log_n_entries(), OP_EQ, 3);
 
   done:
     teardown_capture_of_logs();

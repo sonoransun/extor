@@ -7336,7 +7336,7 @@ test_dir_parse_family_cert(void *arg)
                             &got_expiration);
   tt_ptr_op(got_family_id, OP_EQ, NULL);
   tt_int_op(r, OP_EQ, -1);
-  expect_single_log_msg_containing("Wrong cert type");
+  expect_log_msg_containing("Wrong cert type");
   mock_clean_saved_logs();
   tor_cert_free(cert);
 

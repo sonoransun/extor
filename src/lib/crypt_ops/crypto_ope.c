@@ -78,9 +78,11 @@ ope_get_cipher(const crypto_ope_t *ope, uint32_t initial_idx)
   memset(iv, 0, sizeof(iv));
   memcpy(iv + CIPHER_IV_LEN - sizeof(n), &n, sizeof(n));
 
-  return crypto_cipher_new_with_iv_and_bits(ope->key,
+  crypto_cipher_t *cipher = crypto_cipher_new_with_iv_and_bits(ope->key,
                                             iv,
                                             OPE_KEY_LEN * 8);
+  memwipe(iv, 0, sizeof(iv));
+  return cipher;
 }
 
 /**

@@ -2619,7 +2619,8 @@ test_options_validate__proxy(void *ignored)
   tdata = get_options_test_data("HttpProxy not_so_valid!\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "HTTPProxy failed to parse or resolve. Please fix.");
+  tt_str_op(msg, OP_EQ, "HTTPProxy failed to parse or resolve. "
+            "Expected format: host[:port] (e.g., 127.0.0.1:8080).");
   tor_free(msg);
 
   free_options_test_data(tdata);
@@ -2735,7 +2736,8 @@ test_options_validate__proxy(void *ignored)
   tdata = get_options_test_data("Socks5Proxy not_so_valid!\n");
   ret = options_validate(NULL, tdata->opt, &msg);
   tt_int_op(ret, OP_EQ, -1);
-  tt_str_op(msg, OP_EQ, "Socks5Proxy failed to parse or resolve. Please fix.");
+  tt_str_op(msg, OP_EQ, "Socks5Proxy failed to parse or resolve. "
+            "Expected format: host[:port] (e.g., 127.0.0.1:1080).");
   tor_free(msg);
 
   free_options_test_data(tdata);

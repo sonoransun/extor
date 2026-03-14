@@ -26,6 +26,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_SYS_UIO_H
+#include <sys/uio.h>
+#endif
+
 #ifdef PARANOIA
 /** Helper: If PARANOIA is defined, assert that the buffer in local variable
  * <b>buf</b> is well-formed. */
@@ -173,6 +177,42 @@ flush_chunk(tor_socket_t fd, buf_t *buf, chunk_t *chunk, size_t sz,
   }
 }
 
+#ifdef HAVE_SYS_UIO_H
+/** Write multiple buffer chunks to file descriptor <b>fd</b> using a
+ * single writev() syscall for efficiency.  Write at most <b>sz</b>
+ * bytes.  Return bytes written on success, 0 on blocking, -1 on error. */
+static int
+flush_chunks_writev(buf_t *buf, int fd, size_t sz)
+{
+  struct iovec iov[16];
+  int n_iov = 0;
+  size_t total = 0;
+  chunk_t *chunk;
+
+  for (chunk = buf->head;
+       chunk && n_iov < (int)(sizeof(iov)/sizeof(iov[0])) && total < sz;
+       chunk = chunk->next) {
+    size_t len = chunk->datalen;
+    if (len > sz - total)
+      len = sz - total;
+    iov[n_iov].iov_base = chunk->data;
+    iov[n_iov].iov_len = len;
+    total += len;
+    n_iov++;
+  }
+
+  ssize_t result = writev(fd, iov, n_iov);
+  if (result < 0) {
+    if (ERRNO_IS_EAGAIN(errno))
+      return 0;
+    return -1;
+  }
+  buf_drain(buf, result);
+  tor_assert(result <= BUF_MAX_LEN);
+  return (int)result;
+}
+#endif /* defined(HAVE_SYS_UIO_H) */
+
 /** Write data from <b>buf</b> to the file descriptor <b>fd</b>.  Write at most
  * <b>sz</b> bytes, and remove the written bytes
  * from the buffer.  Return the number of bytes written on success,
@@ -191,6 +231,15 @@ buf_flush_to_fd(buf_t *buf, int fd, size_t sz,
   if (BUG(sz > buf->datalen)) {
     sz = buf->datalen;
   }
+
+#ifdef HAVE_SYS_UIO_H
+  /* When flushing to a non-socket fd (pipe, etc.) and we have multiple
+   * chunks, use writev() to coalesce into a single syscall. */
+  if (!is_socket && buf->head && buf->head->next &&
+      sz > buf->head->datalen) {
+    return flush_chunks_writev(buf, fd, sz);
+  }
+#endif
 
   check();
   while (sz) {

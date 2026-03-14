@@ -69,6 +69,8 @@
 #include "feature/dirauth/authmode.h"
 #include "feature/hs/hs_service.h"
 
+#include <event2/event.h>
+
 #include "core/or/cell_st.h"
 #include "core/or/cell_queue_st.h"
 #include "core/or/or_connection_st.h"
@@ -2185,10 +2187,15 @@ connection_fetch_var_cell_from_buf(or_connection_t *or_conn, var_cell_t **out)
  *
  * Always return 0.
  */
+/** Maximum cells to process from a single connection before yielding
+ * to the event loop. Prevents a busy connection from starving others. */
+#define OR_CONN_CELL_BATCH_SIZE 32
+
 static int
 connection_or_process_cells_from_inbuf(or_connection_t *conn)
 {
   var_cell_t *var_cell;
+  int cells_processed = 0;
 
   /*
    * Note on memory management for incoming cells: below the channel layer,
@@ -2203,7 +2210,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
    * buffer and copy the cell.
    */
 
-  while (1) {
+  while (cells_processed < OR_CONN_CELL_BATCH_SIZE) {
     log_debug(LD_OR,
               TOR_SOCKET_T_FORMAT": starting, inbuf_datalen %d "
               "(%d pending in tls object).",
@@ -2242,7 +2249,17 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
 
       channel_tls_handle_cell(&cell, conn);
     }
+    cells_processed++;
   }
+
+  /* We hit the batch limit. If more cells remain in the inbuf,
+   * re-activate the read event so the event loop processes them
+   * on the next iteration, giving other connections a chance. */
+  if (connection_get_inbuf_len(TO_CONN(conn)) >=
+      (size_t)get_cell_network_size(conn->wide_circ_ids)) {
+    event_active(TO_CONN(conn)->read_event, EV_READ, 1);
+  }
+  return 0;
 }
 
 /** Array of supported link protocol versions. */

@@ -108,6 +108,13 @@ typedef struct scheduler_t {
 /* Maximum interval that KIST runs (in ms). */
 #define KIST_SCHED_RUN_INTERVAL_MAX 100
 
+/* Number of cells to flush per channel per scheduler iteration.
+ * Higher values reduce scheduler iterations needed on busy relays
+ * at the cost of slightly less fine-grained fairness. */
+#define KIST_SCHED_CELLS_PER_CHAN_DEFAULT 8
+#define KIST_SCHED_CELLS_PER_CHAN_MIN 1
+#define KIST_SCHED_CELLS_PER_CHAN_MAX 64
+
 /*****************************************************************************
  * Globally visible scheduler functions
  *

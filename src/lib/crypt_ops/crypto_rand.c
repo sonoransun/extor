@@ -506,7 +506,9 @@ crypto_rand_unmocked(char *to, size_t n)
                "PID changed (%d to %d) without "
                "crypto_postfork(). Reseeding RNG.",
                (int)crypto_rand_last_pid_, (int)pid);
-      crypto_seed_rng();
+      if (crypto_seed_rng() < 0) {
+        log_err(LD_CRYPTO, "Failed to reseed RNG after fork detection.");
+      }
     }
     crypto_rand_last_pid_ = pid;
   }

@@ -76,8 +76,21 @@ worker_state_free_void(void *arg)
 
 static threadpool_t *threadpool = NULL;
 
+/* Thread-safety note: total_pending_tasks and max_pending_tasks are accessed
+ * exclusively from the main event loop thread.  Worker thread reply callbacks
+ * (cpuworker_onion_handshake_replyfn) run from the alert-pipe libevent
+ * handler, which is dispatched in the main loop — not in the worker thread
+ * itself.  Therefore no mutex is needed for these counters. */
 static uint32_t total_pending_tasks = 0;
 static uint32_t max_pending_tasks = 128;
+
+/** Return the current number of pending CPU worker tasks.
+ * Used by throughput metrics reporting. */
+uint32_t
+cpuworker_get_pending_count(void)
+{
+  return total_pending_tasks;
+}
 
 /** Return the consensus parameter max pending tasks per CPU. */
 static uint32_t

@@ -228,6 +228,31 @@ onion_pending_add(or_circuit_t *circ, create_cell_t *onionskin)
     ol_entries[ONION_HANDSHAKE_TYPE_NTOR],
     ol_entries[ONION_HANDSHAKE_TYPE_TAP]);
 
+  /* Warn when the queue is approaching saturation so operators can
+   * take action (lower MaxAdvertisedBandwidth, restrict exit policy)
+   * before handshakes start getting dropped. */
+  {
+    int total_queued = ol_entries[ONION_HANDSHAKE_TYPE_NTOR] +
+                       ol_entries[ONION_HANDSHAKE_TYPE_TAP];
+    int n_cpus = cpuworker_get_n_threads();
+    /* Rough capacity estimate: CPUs * per-CPU limit.  We use 50 as a
+     * proxy since have_room_for_onionskin() allows up to 50 without
+     * checking time estimates. */
+    int est_capacity = MAX(n_cpus * 50, 100);
+    if (total_queued >= (est_capacity * 4) / 5) {
+      static ratelim_t saturation_rl = RATELIM_INIT(60);
+      char *m;
+      if ((m = rate_limit_log(&saturation_rl, approx_time()))) {
+        log_warn(LD_GENERAL,
+                 "Onion handshake queue at ~%d%% capacity (%d queued, "
+                 "~%d estimated max). Consider reducing relay load.%s",
+                 (total_queued * 100) / est_capacity,
+                 total_queued, est_capacity, m);
+        tor_free(m);
+      }
+    }
+  }
+
   circ->onionqueue_entry = tmp;
   TOR_TAILQ_INSERT_TAIL(&ol_list[queue_idx], tmp, next);
 

@@ -38,6 +38,7 @@ void cpuworker_log_onionskin_overhead(int severity, int onionskin_type,
 void cpuworker_cancel_circ_handshake(or_circuit_t *circ);
 
 unsigned int cpuworker_get_n_threads(void);
+uint32_t cpuworker_get_pending_count(void);
 
 #endif /* !defined(TOR_CPUWORKER_H) */
 

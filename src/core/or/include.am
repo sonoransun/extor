@@ -45,6 +45,7 @@ LIBTOR_APP_A_SOURCES += 			\
 	src/core/or/conflux_sys.c		\
 	src/core/or/conflux_util.c		\
 	src/core/or/status.c			\
+	src/core/or/throughput_metrics.c		\
 	src/core/or/versions.c
 
 # ADD_C_FILE: INSERT HEADERS HERE.
@@ -122,6 +123,7 @@ noinst_HEADERS +=					\
 	src/core/or/server_port_cfg_st.h		\
 	src/core/or/socks_request_st.h			\
 	src/core/or/status.h				\
+	src/core/or/throughput_metrics.h			\
 	src/core/or/tor_version_st.h			\
 	src/core/or/var_cell_st.h			\
 	src/core/or/versions.h

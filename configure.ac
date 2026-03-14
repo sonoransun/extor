@@ -1697,6 +1697,7 @@ AC_CHECK_HEADERS([errno.h \
 		  glob.h])
 
 AC_CHECK_HEADERS(sys/param.h)
+AC_CHECK_HEADERS(sys/uio.h)
 
 AC_CHECK_HEADERS(net/if.h, net_if_found=1, net_if_found=0,
 [#ifdef HAVE_SYS_TYPES_H

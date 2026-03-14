@@ -55,8 +55,10 @@ crypto_cipher_new_with_bits(const char *key, int bits)
 {
   char zeroiv[CIPHER_IV_LEN];
   memset(zeroiv, 0, sizeof(zeroiv));
-  return crypto_cipher_new_with_iv_and_bits((uint8_t*)key, (uint8_t*)zeroiv,
-                                            bits);
+  crypto_cipher_t *result = crypto_cipher_new_with_iv_and_bits(
+                                (uint8_t*)key, (uint8_t*)zeroiv, bits);
+  memwipe(zeroiv, 0, sizeof(zeroiv));
+  return result;
 }
 
 /** Return a new crypto_cipher_t with the provided <b>key</b> (of

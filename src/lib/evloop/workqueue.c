@@ -278,6 +278,15 @@ worker_thread_extract_next_work(workerthread_t *thread)
 static void
 worker_thread_main(void *thread_)
 {
+  /* Thread-safety note: n_worker_threads_running is modified by multiple
+   * worker threads, but always under pool->lock (increment at startup,
+   * decrement at exit).  The shutdown poll loop at the bottom of this
+   * function reads it while repeatedly releasing and re-acquiring
+   * pool->lock with a 10ms sleep.  This is safe because the decrement
+   * also happens under pool->lock, so each read sees a consistent value.
+   * A condition variable would be cleaner but the current approach is
+   * adequate given the low thread counts and the fact that shutdown is
+   * not performance-critical. */
   static int n_worker_threads_running = 0;
   static unsigned long control_lock_owner = 0;
   workerthread_t *thread = thread_;

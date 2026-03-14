@@ -144,6 +144,7 @@ aes_cipher_set_key(aes_cnt_cipher_t *cipher_, const uint8_t *key, int key_bits)
   // No need to call EVP_CIPHER_CTX_Reset here; EncryptInit already
   // does it for us.
   EVP_EncryptInit(cipher, c, key, iv);
+  memwipe(iv, 0, sizeof(iv));
 }
 /** Change the IV of this stream cipher without changing the key.
  *
